@@ -12,224 +12,195 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { InputOTP, InputOTPSlot } from "@/components/ui/input-otp";
 import { getToken, setToken } from "@/lib/auth";
+import { getZodError, RecoverySchema, SendOtpSchema, VerifyOtpSchema } from "@/lib/validators/adminAuthSchema";
+
 
 type Step = "phone" | "otp" | "recovery";
 
 export default function LoginPage() {
-    const router = useRouter();
+  const router = useRouter();
 
-    const [step, setStep] = React.useState<Step>("phone");
-    const [phone, setPhone] = React.useState("");
-    const [otp, setOtp] = React.useState("");
-    const [recoveryPass, setRecoveryPass] = React.useState("");
-    const [loading, setLoading] = React.useState(false);
+  const [step, setStep] = React.useState<Step>("phone");
+  const [phone, setPhone] = React.useState("");
+  const [otp, setOtp] = React.useState("");
+  const [recoveryPass, setRecoveryPass] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
 
-    const formatPhone = (p: string) =>
-        p.trim().startsWith("+") ? p.trim() : `+91${p.trim()}`;
-
-    //  Send OTP
-    const handleSendOtp = async () => {
-        const p = phone.trim();
-        if (!p) {
-            toast.error("Please enter a valid phone number.");
-            return;
-        }
-        try {
-            setLoading(true);
-            await api.post(
-                "/admin/send-otp",
-                { phone: formatPhone(p) },
-                { withCredentials: true }
-            );
-            toast.success("OTP sent successfully!");
-            setStep("otp");
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to send OTP.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    //  Verify OTP Login
-    const handleVerifyOtp = async () => {
-        if (!otp) {
-            toast.error("Please enter the OTP.");
-            return;
-        }
-try {
-    setLoading(true);
-    const res = await api.post(
-        "/admin/verify-otp",
-        { phone: formatPhone(phone), code: otp },
-        { withCredentials: true }
-    );
-
-    console.log("🧾 FULL RESPONSE:", res); // 👈 STEP 1
-
-    console.log("📦 Response Data:", res.data); // 👈 STEP 2
-const token = res.data?.data?.token;  // ✅ Correct path
-
-if (token) {
-    setToken(token);
-    console.log("Token Saved to LocalStorage:", getToken());
-} else {
-    console.log(" No token found in response!");
-}
-
-            // Show recovery only for 1st-time login
-            if (res.data?.recovery_pass) {
-                toast.success(`Recovery Pass: ${res.data.recovery_pass}`);
-            } else {
-                toast.success("Login successful!");
-            }
-
-            router.push("/admin/dashboard");
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Invalid OTP. Try again.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Recovery Login
-// Recovery Login
-const handleRecoveryLogin = async () => {
-    if (!recoveryPass) {
-        toast.error("Please enter recovery pass.");
-        return;
-    }
+  // Send OTP
+  const handleSendOtp = async () => {
     try {
-        setLoading(true);
-        const res = await api.post(
-            "/admin/recovery-login",
-            { phone: formatPhone(phone), recovery_pass: recoveryPass },
-            { withCredentials: true }
-        );
+      const parsed = SendOtpSchema.parse({ phone });
+      setLoading(true);
 
-        console.log("📦 Recovery Response:", res.data); // Debug log
+      await api.post(
+        "/admin/send-otp",
+        { phone: parsed.phone },
+        { withCredentials: true }
+      );
 
-        const token = res.data?.data.token;  
-
-        if (token) {
-            setToken(token);
-            console.log("💾 Token Saved (Recovery):", getToken());
-            toast.success("Recovery login successful!");
-            router.push("/admin/dashboard");
-        } else {
-            console.log("❌ No token found in recovery response!");
-            toast.error("Login failed: No token received!");
-        }
-
-    } catch (err: any) {
-        toast.error(err?.response?.data?.message || "Recovery failed. Try again.");
+      toast.success("OTP sent successfully");
+      setStep("otp");
+    } catch (err) {
+      toast.error(getZodError(err));
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center px-4">
-            <Image src={IMAGES.krown} width={100} height={100} alt="krown" />
-            
-            <Card className="w-full max-w-sm">
-                <CardHeader>
-                    <CardTitle className="text-xl">
-                        {step === "phone" && "Enter Phone Number"}
-                        {step === "otp" && "Enter OTP"}
-                        {step === "recovery" && "Recovery Login"}
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Step: phone */}
-                    {step === "phone" && (
-                        <>
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Phone</Label>
-                                <Input
-                                    id="phone"
-                                    placeholder="+91XXXXXXXXXX"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                />
-                            </div>
-                            <Button className="w-full" disabled={loading} onClick={handleSendOtp}>
-                                {loading ? "Sending…" : "Send OTP"}
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                className="w-full"
-                                onClick={() => setStep("recovery")}
-                            >
-                                Can’t receive OTP? Use Recovery
-                            </Button>
-                        </>
-                    )}
-                    {step === "otp" && (
-                        <>
-                            <Label>OTP</Label>
-                            <InputOTP
-                                maxLength={7}
-                                value={otp}
-                                onChange={(value) => setOtp(value)}
-                                className="flex justify-center gap-2"
-                            >
-                                {Array.from({ length: 7 }).map((_, index) => (
-                                    <InputOTPSlot
-                                        key={index}
-                                        index={index}
-                                        className="w-12 h-12 text-xl"
-                                    />
-                                ))}
-                            </InputOTP>
+  };
 
-                            <Button className="w-full" disabled={loading} onClick={handleVerifyOtp}>
-                                {loading ? "Verifying…" : "Verify & Login"}
-                            </Button>
+  // Verify OTP Login
+  const handleVerifyOtp = async () => {
+    try {
+      const parsed = VerifyOtpSchema.parse({ phone, code: otp });
+      setLoading(true);
 
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="secondary"
-                                    className="w-full cursor-pointer"
-                                    disabled={loading}
-                                    onClick={handleSendOtp}
-                                >
-                                    Resend OTP
-                                </Button>
-                            </div>
-                        </>
-                    )}
+      const res = await api.post(
+        "/admin/verify-otp",
+        { phone: parsed.phone, code: parsed.code },
+        { withCredentials: true }
+      );
 
+      const token = res.data?.data?.token;
 
-                    {/* Step: recovery */}
-                    {step === "recovery" && (
-                        <>
-                            <div className="space-y-2">
-                                <Label htmlFor="recovery-phone">Phone</Label>
-                                <Input
-                                    id="recovery-phone"
-                                    placeholder="+91XXXXXXXXXX"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="recovery-pass">Recovery Pass</Label>
-                                <Input
-                                    id="recovery-pass"
-                                    placeholder="Enter your recovery pass"
-                                    value={recoveryPass}
-                                    onChange={(e) => setRecoveryPass(e.target.value.trim())}
-                                />
-                            </div>
-                            <Button className="w-full" disabled={loading} onClick={handleRecoveryLogin}>
-                                {loading ? "Signing in…" : "Login via Recovery"}
-                            </Button>
-                            <Button variant="ghost" className="w-full" onClick={() => setStep("phone")}>
-                                ← Back
-                            </Button>
-                        </>
-                    )}
-                </CardContent>
-            </Card>
-        </div >
-    );
+      if (token) {
+        setToken(token);
+        toast.success("Login successful");
+        router.push("/admin/dashboard");
+      } else {
+        toast.error("No token received");
+      }
+    } catch (err) {
+      toast.error(getZodError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Recovery Login
+  const handleRecoveryLogin = async () => {
+    try {
+      const parsed = RecoverySchema.parse({
+        phone,
+        recovery_pass: recoveryPass,
+      });
+      setLoading(true);
+
+      const res = await api.post(
+        "/admin/recovery-login",
+        { phone: parsed.phone, recovery_pass: parsed.recovery_pass },
+        { withCredentials: true }
+      );
+
+      const token = res.data?.data?.token;
+
+      if (token) {
+        setToken(token);
+        toast.success("Recovery login successful");
+        router.push("/admin/dashboard");
+      } else {
+        toast.error("No token received");
+      }
+    } catch (err) {
+      toast.error(getZodError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <Image src={IMAGES.krown} width={100} height={100} alt="krown" />
+
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-xl">
+            {step === "phone" && "Enter Phone Number"}
+            {step === "otp" && "Enter OTP"}
+            {step === "recovery" && "Recovery Login"}
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {step === "phone" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  placeholder="+91XXXXXXXXXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+              <Button className="w-full" disabled={loading} onClick={handleSendOtp}>
+                {loading ? "Sending…" : "Send OTP"}
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => setStep("recovery")}
+              >
+                Can't receive OTP? Use Recovery
+              </Button>
+            </>
+          )}
+
+          {step === "otp" && (
+            <>
+              <Label>OTP</Label>
+              <InputOTP
+                maxLength={7}
+                value={otp}
+                onChange={(value) => setOtp(value)}
+                className="flex justify-center gap-2"
+              >
+                {Array.from({ length: 7 }).map((_, index) => (
+                  <InputOTPSlot key={index} index={index} className="w-12 h-12 text-xl" />
+                ))}
+              </InputOTP>
+
+              <Button className="w-full" disabled={loading} onClick={handleVerifyOtp}>
+                {loading ? "Verifying…" : "Verify & Login"}
+              </Button>
+
+              <Button
+                variant="secondary"
+                className="w-full"
+                disabled={loading}
+                onClick={handleSendOtp}
+              >
+                Resend OTP
+              </Button>
+            </>
+          )}
+
+          {step === "recovery" && (
+            <>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input
+                  placeholder="+91XXXXXXXXXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Recovery Pass</Label>
+                <Input
+                  placeholder="Enter your recovery pass"
+                  value={recoveryPass}
+                  onChange={(e) => setRecoveryPass(e.target.value)}
+                />
+              </div>
+              <Button className="w-full" disabled={loading} onClick={handleRecoveryLogin}>
+                {loading ? "Signing in…" : "Login via Recovery"}
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setStep("phone")}>
+                ← Back
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
