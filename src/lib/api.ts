@@ -1,18 +1,17 @@
-import Axios from "axios";
+import axios from "axios";
 import { getToken } from "./auth";
 
-const api = Axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api",
+const api = axios.create({
+  baseURL: "http://localhost:4000/api",
 });
 
-// attach Authorization: Bearer <token>
+// Automatically inject token before every request
 api.interceptors.request.use((config) => {
-    const token = getToken();
-    if (token) {
-        config.headers = config.headers ?? {};
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+  const token = getToken(); // from localStorage
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export default api;

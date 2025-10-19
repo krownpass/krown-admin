@@ -22,9 +22,16 @@ export function useAdmin() {
             setLoading(false);
             return;
         }
+
         api.get("/admin/me")
-            .then((res) => setAdmin(res.data?.admin ?? null))
-            .catch(() => setAdmin(null))
+            .then((res) => {
+                console.log("/admin/me Response:", res.data);
+                setAdmin(res.data?.data ?? null);  // FIXED
+            })
+            .catch((err) => {
+                console.error(" Admin Fetch Error:", err);
+                setAdmin(null);
+            })
             .finally(() => setLoading(false));
     }, []);
 

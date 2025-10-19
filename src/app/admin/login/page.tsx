@@ -11,7 +11,7 @@ import { IMAGES } from "../../../../public/assets";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { InputOTP, InputOTPSlot } from "@/components/ui/input-otp";
-import { setToken } from "@/lib/auth";
+import { getToken, setToken } from "@/lib/auth";
 
 type Step = "phone" | "otp" | "recovery";
 
@@ -56,15 +56,26 @@ export default function LoginPage() {
             toast.error("Please enter the OTP.");
             return;
         }
-        try {
-            setLoading(true);
-            const res = await api.post(
-                "/admin/verify-otp",
-                { phone: formatPhone(phone), code: otp },
-                { withCredentials: true }
-            );
+try {
+    setLoading(true);
+    const res = await api.post(
+        "/admin/verify-otp",
+        { phone: formatPhone(phone), code: otp },
+        { withCredentials: true }
+    );
 
-            if (res.data?.token) setToken(res.data.token);
+    console.log("🧾 FULL RESPONSE:", res); // 👈 STEP 1
+
+    console.log("📦 Response Data:", res.data); // 👈 STEP 2
+const token = res.data?.data?.token;  // ✅ Correct path
+
+if (token) {
+    setToken(token);
+    console.log("Token Saved to LocalStorage:", getToken());
+} else {
+    console.log(" No token found in response!");
+}
+
             // Show recovery only for 1st-time login
             if (res.data?.recovery_pass) {
                 toast.success(`Recovery Pass: ${res.data.recovery_pass}`);
@@ -81,33 +92,44 @@ export default function LoginPage() {
     };
 
     // Recovery Login
-    const handleRecoveryLogin = async () => {
-        if (!recoveryPass) {
-            toast.error("Please enter recovery pass.");
-            return;
-        }
-        try {
-            setLoading(true);
-            const res = await api.post(
-                "/admin/recovery-login",
-                { phone: formatPhone(phone), recovery_pass: recoveryPass },
-                { withCredentials: true }
-            );
+// Recovery Login
+const handleRecoveryLogin = async () => {
+    if (!recoveryPass) {
+        toast.error("Please enter recovery pass.");
+        return;
+    }
+    try {
+        setLoading(true);
+        const res = await api.post(
+            "/admin/recovery-login",
+            { phone: formatPhone(phone), recovery_pass: recoveryPass },
+            { withCredentials: true }
+        );
 
-            if (res.data?.token) setToken(res.data.token);
+        console.log("📦 Recovery Response:", res.data); // Debug log
+
+        const token = res.data?.data.token;  
+
+        if (token) {
+            setToken(token);
+            console.log("💾 Token Saved (Recovery):", getToken());
             toast.success("Recovery login successful!");
             router.push("/admin/dashboard");
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Recovery failed. Try again.");
-        } finally {
-            setLoading(false);
+        } else {
+            console.log("❌ No token found in recovery response!");
+            toast.error("Login failed: No token received!");
         }
-    };
 
+    } catch (err: any) {
+        toast.error(err?.response?.data?.message || "Recovery failed. Try again.");
+    } finally {
+        setLoading(false);
+    }
+};
     return (
         <div className="min-h-screen flex flex-col items-center justify-center px-4">
             <Image src={IMAGES.krown} width={100} height={100} alt="krown" />
-
+            
             <Card className="w-full max-w-sm">
                 <CardHeader>
                     <CardTitle className="text-xl">
