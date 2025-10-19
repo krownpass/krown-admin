@@ -10,25 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { CreateCafeInput, CreateCafeSchema } from "@/lib/validators/schema";
 
 // Frontend version of your backend schema
-const CreateCafeSchema = z.object({
-  cafe_name: z.string().min(3, "Café name is required"),
-  cafe_location: z.string().min(5, "Location must be descriptive"),
-  cafe_description: z.string().optional(),
-  cafe_mobile_no: z
-    .string()
-    .regex(/^\+?\d{10,15}$/, "Invalid phone number format"),
-  cafe_upi_id: z.string().min(5, "Valid UPI ID required"),
-  opening_time: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format (HH:MM)"),
-  closing_time: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format (HH:MM)"),
-});
-
-type CreateCafeInput = z.infer<typeof CreateCafeSchema>;
 
 export default function CreateCafePage() {
   // Setup form

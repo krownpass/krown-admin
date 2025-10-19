@@ -12,17 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { Eye, EyeOff } from "lucide-react";
+import { CreateCafeUserInput, CreateCafeUserSchema } from "@/lib/validators/schema";
 
-const CreateCafeUserSchema = z.object({
-  user_name: z.string().min(4, "Minimum 4 characters required").max(15, "Maximum 15 characters allowed"),
-  user_email: z.string().email("Invalid email address"),
-  user_mobile_no: z.string().regex(/^\+?\d{10,15}$/, "Invalid phone number"),
-  login_user_name: z.string().min(4).max(15),
-  password_hash: z.string().min(6, "Minimum 6 characters required"),
-  cafe_id: z.uuid("Invalid Café ID"),
-});
-
-type CreateCafeUserInput = z.infer<typeof CreateCafeUserSchema>;
 
 export default function CreateCafeUserPage() {
   const [cafes, setCafes] = useState<{ cafe_id: string; cafe_name: string }[]>([]);
