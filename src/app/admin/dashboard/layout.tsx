@@ -27,19 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <AdminHeader
                             title="Krown Dashboard"
                             onToggleSidebar={() => setSidebarOpen((v) => !v)}
-                            right={
-                                <div className="hidden md:flex items-center gap-2">
-                                    <label className="text-sm text-muted-foreground">Mode:</label>
-                                    <select
-                                        value={mode}
-                                        onChange={(e) => setMode(e.target.value as any)}
-                                        className="rounded-md border bg-background px-2 py-1 text-sm"
-                                    >
-                                        <option value="hover">Hover expand</option>
-                                        <option value="click">Click toggle</option>
-                                    </select>
-                                </div>
-                            }
+                            
                         />
                     </div>
                 </div>

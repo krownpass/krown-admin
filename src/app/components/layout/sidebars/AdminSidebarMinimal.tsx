@@ -75,6 +75,8 @@ export function AdminSidebarMinimal({ open, onClose }: { open: boolean; onClose:
                             <Link href="/admin/dashboard/cafes" className="block pl-8 py-1 text-sm hover:underline">All Cafes</Link>
                             <Link href="/admin/dashboard/cafes/create/cafe" className="block pl-8 py-1 text-sm hover:underline">Create Cafe</Link>
                             <Link href="/admin/dashboard/cafes/create/users" className="block pl-8 py-1 text-sm hover:underline">Create Cafe Users</Link>
+                            <Link href="/admin/dashboard/cafes/update/" className="block pl-8 py-1 text-sm hover:underline">Update Cafe Users</Link>
+
 
                         </motion.div>
                     )}

@@ -3,6 +3,7 @@ export const CreateCafeUserSchema = z.object({
   user_name: z.string().min(4, "Minimum 4 characters required").max(15, "Maximum 15 characters allowed"),
   user_email: z.string().email("Invalid email address"),
   user_mobile_no: z.string().regex(/^\+?\d{10,15}$/, "Invalid phone number"),
+    user_role: z.enum(['cafe_admin', 'cafe_staff']), 
   login_user_name: z.string().min(4).max(15),
   password_hash: z.string().min(6, "Minimum 6 characters required"),
   cafe_id: z.uuid("Invalid Café ID"),
