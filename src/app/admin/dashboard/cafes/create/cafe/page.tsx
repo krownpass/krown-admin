@@ -3,23 +3,23 @@
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+
 import api from "@/lib/api";
 import { CreateCafeInput, CreateCafeSchema } from "@/lib/validators/schema";
 
-// Frontend version of your backend schema
-
 export default function CreateCafePage() {
-  // Setup form
+  // Form setup
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
     reset,
   } = useForm<CreateCafeInput>({
     resolver: zodResolver(CreateCafeSchema),
@@ -34,31 +34,41 @@ export default function CreateCafePage() {
     },
   });
 
-  //  Submit handler
-  const onSubmit = async (data: CreateCafeInput) => {
-    try {
+  // Mutation for café creation
+  const createCafe = useMutation({
+    mutationFn: async (data: CreateCafeInput) => {
       const res = await api.post("/admin/cafe/create", {
         ...data,
         cafe_latitude: 0,
         cafe_longitude: 0,
         ratings: 0,
       });
-      toast.success(" Café created successfully!", {
-        description: `${res.data.data.cafe_name} has been added.`,
+      return res.data;
+    },
+    onSuccess: (res) => {
+      toast.success("Café created successfully!", {
+        description: `${res.data.cafe_name} has been added.`,
         className: "bg-green-50 border-green-500 text-green-900",
       });
       reset();
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       const msg =
-        err.response?.data?.message || err.message || "Failed to create café";
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to create café";
       toast.error("Failed to create café", {
         description: msg,
         className: "bg-red-50 border-red-500 text-red-900",
       });
-    }
+    },
+  });
+
+  // Submit handler
+  const onSubmit = (data: CreateCafeInput) => {
+    createCafe.mutate(data);
   };
 
-  // UI
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -169,10 +179,10 @@ export default function CreateCafePage() {
             <motion.div whileTap={{ scale: 0.97 }}>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={createCafe.isPending}
                 className="px-10 py-2 text-base font-semibold tracking-wide"
               >
-                {isSubmitting ? "Creating..." : "Create Café"}
+                {createCafe.isPending ? "Creating..." : "Create Café"}
               </Button>
             </motion.div>
           </div>

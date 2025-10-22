@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 
 // ✅ Use Google version instead of local .ttf
 import { Bebas_Neue } from "next/font/google";
+import { ReactQueryProvider } from "./components/providers/ReactQueryProvider";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -35,8 +36,12 @@ export default function RootLayout({
     <html lang="en">
       {/* Geist Mono = Global (Body) Font */}
       <body className={geistMono.variable}>
-        {children}
+                <ReactQueryProvider>
+
         <Toaster richColors position="top-center" />
+        {children}
+                </ReactQueryProvider>
+
       </body>
     </html>
   );

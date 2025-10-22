@@ -1,39 +1,29 @@
-
 "use client";
-import { AdminContent } from "@/app/components/layout/AdminContent";
+
+import { useState } from "react";
 import { AdminHeader } from "@/app/components/layout/AdminHeader";
-import { AdminSidebar } from "@/app/components/layout/sidebars";
-import { useRouter } from "next/navigation";
-import * as React from "react";
+import { AdminSidebarMinimal } from "@/app/components/layout/sidebars/AdminSidebarMinimal";
+import { AdminContent } from "@/app/components/layout/AdminContent";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-      const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-      React.useEffect(() => {
-    const token = localStorage.getItem("krown_admin_token");
-    if (!token) {
-      router.push("/admin/login");
-    }
-  }, []);
-    const [sidebarOpen, setSidebarOpen] = React.useState(true);
-    const [mode, setMode] = React.useState<"hover" | "click">("hover");
+  const handleToggleSidebar = () => setSidebarOpen((prev) => !prev);
 
-    return (
-        <div className="flex h-dvh w-full bg-background text-foreground">
-            <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <div className="flex min-w-0 flex-1 flex-col">
-                <div className="border-b bg-background/70 backdrop-blur">
-                    <div className="flex items-center justify-between px-4">
-                        <AdminHeader
-                            title="Krown Dashboard"
-                            onToggleSidebar={() => setSidebarOpen((v) => !v)}
-                            
-                        />
-                    </div>
-                </div>
-                <AdminContent>{children}</AdminContent>
-            </div>
-        </div>
-    );
+  return (
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <AdminSidebarMinimal open={sidebarOpen} onClose={handleToggleSidebar} />
+
+      {/* Main Content */}
+      <div className="flex flex-col flex-1 overflow-y-auto">
+        <AdminHeader title="Dashboard" onToggleSidebar={handleToggleSidebar} />
+        
+        {/* Main Page Area */}
+        <main className="flex-1 p-6">
+          <AdminContent>{children}</AdminContent>
+        </main>
+      </div>
+    </div>
+  );
 }
-

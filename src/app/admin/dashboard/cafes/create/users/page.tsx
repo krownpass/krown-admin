@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Eye, EyeOff } from "lucide-react";
+import api from "@/lib/api";
+
+import {
+  CreateCafeUserInput,
+  CreateCafeUserSchema,
+} from "@/lib/validators/schema";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -14,24 +24,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import api from "@/lib/api";
-import { Eye, EyeOff } from "lucide-react";
-import {
-  CreateCafeUserInput,
-  CreateCafeUserSchema,
-} from "@/lib/validators/schema";
+
+// ✅ Data type for café list
+type CafeOption = { cafe_id: string; cafe_name: string };
 
 export default function CreateCafeUserPage() {
-  const [cafes, setCafes] = useState<{ cafe_id: string; cafe_name: string }[]>(
-    []
-  );
   const [showPassword, setShowPassword] = useState(false);
+  const queryClient = useQueryClient();
 
+  // ✅ Fetch cafés (React Query)
+  const { data: cafes = [], isLoading: cafesLoading } = useQuery<CafeOption[]>({
+    queryKey: ["cafes-list"],
+    queryFn: async () => {
+      const res = await api.get("/admin/cafe_name/list");
+      return res.data?.data || [];
+    },
+  });
+
+  // ✅ React Hook Form
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
     setValue,
     getValues,
     reset,
@@ -39,20 +53,32 @@ export default function CreateCafeUserPage() {
     resolver: zodResolver(CreateCafeUserSchema),
   });
 
-  useEffect(() => {
-    const fetchCafes = async () => {
-      try {
-        const res = await api.get("/admin/cafe_name/list");
-        setCafes(res.data?.data || []);
-      } catch {
-        toast.error("Failed to fetch cafés");
-      }
-    };
-    fetchCafes();
-  }, []);
+  // ✅ Create user mutation
+  const createUser = useMutation({
+    mutationFn: async (data: CreateCafeUserInput) =>
+      api.post("/admin/cafe/user/create", data),
+    onSuccess: (res) => {
+      toast.success("Café user created successfully", {
+        description:
+          res.data?.data?.user_name ||
+          res.data?.message ||
+          "User has been added",
+      });
+      queryClient.invalidateQueries({ queryKey: ["cafes-list"] });
+      reset();
+      setValue("cafe_id", undefined as unknown as string);
+      setValue(
+        "user_role",
+        undefined as unknown as CreateCafeUserInput["user_role"]
+      );
+    },
+    onError: (err: any) =>
+      toast.error("Failed to create café user", {
+        description: err?.response?.data?.message || err?.message || "Error",
+      }),
+  });
 
-  const onSubmit = async (data: CreateCafeUserInput) => {
-    // guard against missing selections (extra safety beyond Zod)
+  const onSubmit = (data: CreateCafeUserInput) => {
     if (!data.cafe_id) {
       toast.error("Select a café to assign this user");
       return;
@@ -61,28 +87,10 @@ export default function CreateCafeUserPage() {
       toast.error("Select a role for this user");
       return;
     }
-
-    try {
-      const res = await api.post("/admin/cafe/user/create", data);
-
-      toast.success("Café user created successfully", {
-        description:
-          res?.data?.data?.user_name ||
-          res?.data?.message ||
-          "User has been added",
-      });
-
-      reset();
-      // keep dropdowns visually reset
-      setValue("cafe_id", undefined as unknown as string);
-      setValue("user_role", undefined as unknown as CreateCafeUserInput["user_role"]);
-    } catch (err: any) {
-      toast.error("Failed to create café user", {
-        description: err?.response?.data?.message || err?.message || "Error",
-      });
-    }
+    createUser.mutate(data);
   };
 
+  // ✅ UI
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -174,11 +182,16 @@ export default function CreateCafeUserPage() {
           <div className="space-y-2 md:col-span-1">
             <Label htmlFor="cafe_id">Assign to Café</Label>
             <Select
+              disabled={cafesLoading}
               value={getValues("cafe_id") || undefined}
-              onValueChange={(v) => setValue("cafe_id", v, { shouldValidate: true })}
+              onValueChange={(v) =>
+                setValue("cafe_id", v, { shouldValidate: true })
+              }
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Café" />
+                <SelectValue
+                  placeholder={cafesLoading ? "Loading..." : "Select Café"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {cafes.length > 0 ? (
@@ -205,11 +218,9 @@ export default function CreateCafeUserPage() {
             <Select
               value={getValues("user_role") || undefined}
               onValueChange={(v) =>
-                setValue(
-                  "user_role",
-                  v as CreateCafeUserInput["user_role"],
-                  { shouldValidate: true }
-                )
+                setValue("user_role", v as CreateCafeUserInput["user_role"], {
+                  shouldValidate: true,
+                })
               }
             >
               <SelectTrigger className="w-full">
@@ -230,10 +241,10 @@ export default function CreateCafeUserPage() {
             <motion.div whileTap={{ scale: 0.97 }}>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={createUser.isPending}
                 className="px-10 py-2 text-base font-semibold tracking-wide"
               >
-                {isSubmitting ? "Creating..." : "Create User"}
+                {createUser.isPending ? "Creating..." : "Create User"}
               </Button>
             </motion.div>
           </div>
