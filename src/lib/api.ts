@@ -1,6 +1,7 @@
 import axios from "axios";
 import { getToken } from "./auth";
 
+//url
 const api = axios.create({
     baseURL: "https://krown-server.onrender.com/api",
 });
