@@ -30,6 +30,15 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+type Banner = {
+    image_id: number;
+    image_url: string;
+    path: string;
+    section: string;
+    admin_id: string;
+    created_at: string;
+    updated_at: string;
+};
 export default function BannersPage() {
     const { admin, loading } = useAdmin();
     const queryClient = useQueryClient();
@@ -39,20 +48,22 @@ export default function BannersPage() {
     const [uploading, setUploading] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
-    // 🔹 Fetch banners grouped by section
     const fetchBanners = async () => {
         const { data } = await api.get("/admin/banner/all");
         return data.data || {};
     };
 
-    const { data: bannersBySection, isLoading } = useQuery({
+    const { data: bannersBySection, isLoading } = useQuery<
+        Record<string, Banner[]>
+    >({
         queryKey: ["banners"],
         queryFn: fetchBanners,
     });
 
-    //  Upload banner
+    // UPLOAD
     const handleUpload = async (file: File, section: string) => {
         setUploading(true);
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("section", section);
@@ -61,20 +72,17 @@ export default function BannersPage() {
         formData.append("admin_id", admin?.admin_id || "");
 
         try {
-            await api.post("/admin/banner/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            await api.post("/admin/banner/upload", formData);
             toast.success("Banner uploaded successfully!");
             queryClient.invalidateQueries({ queryKey: ["banners"] });
         } catch (err: any) {
-            console.error("Upload error:", err.response?.data);
-            toast.error(err.response?.data?.message || "Failed to upload banner");
+            toast.error(err.response?.data?.message || "Upload failed");
         } finally {
             setUploading(false);
         }
     };
 
-    //  Delete banner
+    // DELETE
     const handleDelete = async (imageId: string) => {
         setDeletingId(imageId);
         try {
@@ -88,10 +96,32 @@ export default function BannersPage() {
         }
     };
 
-    //  Add a new section
+    // REPLACE BANNER
+    const handleReplace = async (file: File, img: any) => {
+        setUploading(true);
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("image_id", img.image_id);
+        formData.append("bucket", "krown-admin");
+        formData.append("admin_id", admin?.admin_id || "");
+
+        try {
+            await api.post("/admin/banner/replace", formData);
+            toast.success("Banner replaced successfully!");
+            queryClient.invalidateQueries({ queryKey: ["banners"] });
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Replace failed");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    // NEW SECTION
     const handleAddSection = () => {
         const section = newSectionName.trim().toLowerCase();
-        if (!section) return toast.error("Enter a section name");
+        if (!section) return toast.error("Enter section name");
+
         if (bannersBySection && bannersBySection[section]) {
             return toast.error("Section already exists");
         }
@@ -100,7 +130,8 @@ export default function BannersPage() {
             ...prev,
             [section]: [],
         }));
-        toast.success(`New section "${section}" created`);
+
+        toast.success(`Section "${section}" created`);
         setNewSectionName("");
         setCreatingSection(false);
     };
@@ -120,16 +151,13 @@ export default function BannersPage() {
             animate={{ opacity: 1, y: 0 }}
             className="p-6 md:p-10 space-y-10"
         >
-            {/* ---------- Header ---------- */}
+            {/* HEADER */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Manage Banners</h1>
-                    <p className="text-gray-500">
-                        Upload or delete banners for each app section.
-                    </p>
+                    <h1 className="text-3xl font-bold">Manage Banners</h1>
+                    <p className="text-gray-500">Upload, delete or replace banners.</p>
                 </div>
 
-                {/* Add new section button */}
                 {creatingSection ? (
                     <div className="flex gap-2">
                         <Input
@@ -139,18 +167,12 @@ export default function BannersPage() {
                             className="w-48"
                         />
                         <Button onClick={handleAddSection}>Add</Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => setCreatingSection(false)}
-                        >
+                        <Button variant="outline" onClick={() => setCreatingSection(false)}>
                             Cancel
                         </Button>
                     </div>
                 ) : (
-                    <Button
-                        onClick={() => setCreatingSection(true)}
-                        className="flex items-center gap-2"
-                    >
+                    <Button onClick={() => setCreatingSection(true)}>
                         <PlusCircle size={16} /> New Section
                     </Button>
                 )}
@@ -158,41 +180,20 @@ export default function BannersPage() {
 
             <Separator />
 
-            {/* ---------- Dynamic Sections ---------- */}
-            {Object.keys(sections).length === 0 && (
-                <div className="text-center py-10 text-gray-500">
-                    No sections found. Add a new section to start uploading banners.
-                </div>
-            )}
-
+            {/* SECTIONS */}
             {Object.entries(sections).map(([section, banners]) => (
-                <motion.div
-                    key={section}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 space-y-4"
-                >
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold capitalize">
-                            {section} Section
-                        </h2>
+                <motion.div key={section} className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-semibold capitalize">{section}</h2>
 
-                        {/* Upload image button */}
                         <Label
                             htmlFor={`${section}-upload`}
-                            className={`flex items-center gap-2 text-blue-600 hover:underline cursor-pointer ${uploading ? "opacity-60 pointer-events-none" : ""
-                                }`}
+                            className={`flex items-center gap-2 text-blue-600 cursor-pointer`}
                         >
-                            {uploading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
-                                </>
-                            ) : (
-                                <>
-                                    <Upload className="w-4 h-4" /> Upload Image
-                                </>
-                            )}
+                            {uploading ? <Loader2 className="animate-spin" /> : <Upload />}
+                            Upload Image
                         </Label>
+
                         <Input
                             id={`${section}-upload`}
                             type="file"
@@ -201,79 +202,72 @@ export default function BannersPage() {
                             onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
-                                if ((banners as any[]).length >= 5) {
-                                    toast.error("You can upload up to 5 banners per section.");
-                                    return;
-                                }
                                 handleUpload(file, section);
                             }}
                         />
                     </div>
 
-                    {/* Banner Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <AnimatePresence>
-                            {(banners as any[]).map((img: any) => (
-                                <motion.div
-                                    key={img.image_id}
-                                    layout
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -8 }}
-                                    className="relative group rounded-lg overflow-hidden border"
-                                >
-                                    <Image
-                                        src={img.image_url}
-                                        alt="banner"
-                                        width={400}
-                                        height={200}
-                                        className="object-cover h-40 w-full"
-                                    />
+                        {banners.map((img: any) => (
+                            <motion.div
+                                key={img.image_id}
+                                className="relative group border rounded-lg overflow-hidden"
+                            >
+                                <Image
+                                    src={img.image_url}
+                                    alt="banner"
+                                    width={400}
+                                    height={200}
+                                    className="object-cover h-40 w-full"
+                                />
 
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <button
-                                                className="absolute top-2 right-2 bg-red-500/80 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition"
-                                                disabled={!!deletingId}
+                                {/* DELETE BUTTON */}
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <button className="absolute top-2 right-2 bg-red-500/80 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Banner?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Are you sure? This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                className="bg-red-600 hover:bg-red-700"
+                                                onClick={() => handleDelete(img.image_id)}
                                             >
-                                                {deletingId === img.image_id ? (
-                                                    <Loader2 size={16} className="animate-spin" />
-                                                ) : (
-                                                    <Trash2 size={16} />
-                                                )}
-                                            </button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle className="flex items-center gap-2">
-                                                    <AlertTriangle className="text-red-600" /> Confirm
-                                                    Deletion
-                                                </AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Are you sure you want to delete this banner? This
-                                                    action cannot be undone.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                    className="bg-red-600 hover:bg-red-700"
-                                                    onClick={() => handleDelete(img.image_id)}
-                                                >
-                                                    Delete
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
 
-                        {(banners as any[]).length === 0 && (
-                            <p className="col-span-full text-sm text-gray-500 text-center py-8">
-                                No banners uploaded yet.
-                            </p>
-                        )}
+                                {/* REPLACE BUTTON */}
+                                <Label
+                                    htmlFor={`replace-${img.image_id}`}
+                                    className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-lg hover:bg-black/80 backdrop-blur-sm shadow-md opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                >
+                                    Replace
+                                </Label>
+
+                                <Input
+                                    id={`replace-${img.image_id}`}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        handleReplace(file, img);
+                                    }}
+                                />
+                            </motion.div>
+                        ))}
                     </div>
                 </motion.div>
             ))}

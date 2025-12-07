@@ -1,7 +1,5 @@
-
 "use client";
 
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Card,
@@ -26,15 +24,26 @@ import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 
+
+interface Feature {
+    title?: string;
+    description?: string;
+    icon_url?: string;
+    rupeecoin?: string;
+    rupeecoinText?: string;
+}
+
 interface Subscription {
     subscription_id: number;
     price: number;
     subscription_name: string;
-    subscription_desc: string[];
+    features: Feature[];
     valid_days: number;
     free_drinks: number;
     redemption_limit_per_cafe: number;
     applies_to_all_cafes: boolean;
+    rupeecoin?: string;
+    rupeecoinText?: string;
 }
 
 export default function SubscriptionList({
@@ -44,16 +53,32 @@ export default function SubscriptionList({
 }) {
     const queryClient = useQueryClient();
 
-    // Fetch all subscriptions
+
     const { data = [], isLoading } = useQuery<Subscription[]>({
         queryKey: ["subscriptions"],
         queryFn: async () => {
             const res = await api.get("/subscriptions/all");
-            return res.data?.subscriptions ?? res.data?.data ?? [];
+
+            const subs = res.data?.subscriptions ?? res.data?.data ?? [];
+
+            return subs.map((s: Subscription) => {
+                const rupee = s.features.find((f) => f.rupeecoin);
+
+                const normalFeatures = s.features.filter(
+                    (f) => !f.rupeecoin && !f.rupeecoinText
+                );
+
+                return {
+                    ...s,
+                    features: normalFeatures,
+                    rupeecoin: rupee?.rupeecoin,
+                    rupeecoinText: rupee?.rupeecoinText,
+                };
+            });
         },
     });
 
-    // Delete mutation
+
     const deletePlan = useMutation({
         mutationFn: async (id: number) => {
             const res = await api.delete(`/subscriptions/${id}`);
@@ -67,6 +92,7 @@ export default function SubscriptionList({
             toast.error(err?.response?.data?.message || "Failed to delete plan");
         },
     });
+
 
     if (isLoading)
         return (
@@ -82,22 +108,23 @@ export default function SubscriptionList({
             </p>
         );
 
+
     return (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.map((plan) => (
                 <Card
                     key={plan.subscription_id}
-                    className="relative flex flex-col justify-between min-h-[250px] shadow-md border hover:shadow-lg transition-all"
+                    className="relative flex flex-col justify-between min-h-[260px] shadow-md border hover:shadow-lg transition-all"
                 >
-                    {/* ----- Action Buttons ----- */}
+                    {/* ACTION BUTTONS */}
                     <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
                         <Button
                             size="icon"
                             variant="outline"
-                            className="h-8 w-8 rounded-full border border-border bg-background hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-all"
+                            className="h-8 w-8 rounded-full"
                             onClick={() => onEdit(plan)}
                         >
-                            <Pencil className="w-4 h-4" strokeWidth={1.8} />
+                            <Pencil className="w-4 h-4" />
                         </Button>
 
                         <AlertDialog>
@@ -105,24 +132,29 @@ export default function SubscriptionList({
                                 <Button
                                     size="icon"
                                     variant="destructive"
-                                    className="h-8 w-8 rounded-full flex items-center justify-center transition-all hover:bg-red-600"
+                                    className="h-8 w-8 rounded-full"
                                     disabled={deletePlan.isPending}
                                 >
-                                    <Trash2 className="w-4 h-4" strokeWidth={1.8} />
+                                    <Trash2 className="w-4 h-4" />
                                 </Button>
                             </AlertDialogTrigger>
+
                             <AlertDialogContent>
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Plan</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Are you sure you want to delete “{plan.subscription_name}”?
+                                        Are you sure you want to delete &quot;
+                                        {plan.subscription_name}&quot;?
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
+
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
+
                                     <AlertDialogAction
-                                        onClick={() => deletePlan.mutate(plan.subscription_id)}
-                                        className="bg-destructive text-white hover:bg-red-600"
+                                        onClick={() =>
+                                            deletePlan.mutate(plan.subscription_id)
+                                        }
                                     >
                                         Delete
                                     </AlertDialogAction>
@@ -131,33 +163,74 @@ export default function SubscriptionList({
                         </AlertDialog>
                     </div>
 
-                    {/* ----- Card Header ----- */}
-                    <CardHeader className="pb-2 pr-10 p-6">
+                    {/* HEADER */}
+                    <CardHeader className="pb-2 pr-10">
                         <CardTitle className="flex justify-between items-center">
                             <span className="truncate font-semibold text-lg">
                                 {plan.subscription_name}
                             </span>
+
                             <span className="text-primary font-bold text-base whitespace-nowrap ml-2">
                                 ₹{plan.price}
                             </span>
                         </CardTitle>
+
                         <CardDescription className="text-xs text-muted-foreground mt-1">
-                            Valid {plan.valid_days} days • {plan.free_drinks} free drinks •{" "}
-                            {plan.redemption_limit_per_cafe} redemption(s)/café
+                            Valid {plan.valid_days} days • {plan.free_drinks} free
+                            drinks • {plan.redemption_limit_per_cafe} redemption(s)/café
                         </CardDescription>
+
+                        {/* GLOBAL RUPEE COIN */}
+                        {plan.rupeecoin && (
+                            <div className="flex items-center gap-2 mt-2">
+                                <img
+                                    src={plan.rupeecoin}
+                                    alt="rupee coin"
+                                    className="w-5 h-5 object-contain"
+                                />
+                                <span className="text-xs font-medium">
+                                    {plan.rupeecoinText}
+                                </span>
+                            </div>
+                        )}
                     </CardHeader>
 
-                    {/* ----- Card Body ----- */}
-                    <CardContent className="flex-1 flex flex-col justify-between">
-                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground mt-2">
-                            {plan.subscription_desc.map((d, i) => (
-                                <li key={i} className="leading-snug">
-                                    {d}
-                                </li>
+                    {/* FEATURES */}
+                    <CardContent className="flex-1">
+                        <div className="space-y-2 mt-2">
+                            {plan.features?.map((f, i) => (
+                                <div
+                                    key={i}
+                                    className="flex items-start gap-3 border rounded-md p-2 bg-muted/30"
+                                >
+                                    {/* ICON */}
+                                    {f.icon_url ? (
+                                        <img
+                                            src={f.icon_url}
+                                            alt="feature icon"
+                                            className="w-8 h-8 rounded object-contain border"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground">
+                                            No Icon
+                                        </div>
+                                    )}
+
+                                    {/* TEXT */}
+                                    <div>
+                                        <p className="text-sm font-semibold">{f.title}</p>
+                                        <p className="text-xs text-muted-foreground leading-snug">
+                                            {f.description}
+                                        </p>
+                                    </div>
+                                </div>
                             ))}
-                        </ul>
+                        </div>
+
                         <div className="mt-3 text-xs text-right text-muted-foreground italic">
-                            {plan.applies_to_all_cafes ? "All Cafes" : "Specific Cafes Only"}
+                            {plan.applies_to_all_cafes
+                                ? "All Cafes"
+                                : "Specific Cafes Only"}
                         </div>
                     </CardContent>
                 </Card>

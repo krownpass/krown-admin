@@ -14,6 +14,7 @@ import {
     MoreVertical,
     LogOut,
     ChevronDown,
+    BellOff
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import api from "@/lib/api";
@@ -167,6 +168,13 @@ export function AdminSidebarMinimal({
                             >
                                 Banners
                             </Link>
+
+                            <Link
+                                href="/admin/dashboard/notifications"
+                                className="block pl-8 py-1 text-sm hover:underline"
+                            >
+                                {!collapsed && <span>Notifications</span>}
+                            </Link>
                             <Link
                                 href="#"
                                 className="block pl-8 py-1 text-sm hover:underline"
@@ -200,6 +208,8 @@ export function AdminSidebarMinimal({
                     <Settings className="size-4" />
                     {!collapsed && <span>Settings</span>}
                 </Link>
+
+
             </nav>
 
             {/* Footer */}
