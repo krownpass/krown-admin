@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Coffee } from "lucide-react";
 import SubscriptionList from "./screens/SubscriptionList";
 import SubscriptionForm from "./screens/subscriptionForm";
+import GiftCodesList from "./screens/GiftCodeList";
 
 export default function SubscriptionPlansPage() {
     const [tab, setTab] = useState("view");
@@ -25,6 +26,7 @@ export default function SubscriptionPlansPage() {
                 <TabsList className="mb-6">
                     <TabsTrigger value="view">View All</TabsTrigger>
                     <TabsTrigger value="create">Create / Edit</TabsTrigger>
+                    <TabsTrigger value="codes">GiftCodes</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="view">
@@ -51,6 +53,9 @@ export default function SubscriptionPlansPage() {
                             }}
                         />
                     </motion.div>
+                </TabsContent>
+                <TabsContent value="codes">
+                    <GiftCodesList />
                 </TabsContent>
             </Tabs>
         </div>
