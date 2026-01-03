@@ -8,7 +8,7 @@ type Admin = {
     admin_id: string;
     name: string;
     phone: string;
-    role: "admin" | "master_admin";
+    role: "krown_admin" | "master_admin";
 };
 
 export function useAdmin() {

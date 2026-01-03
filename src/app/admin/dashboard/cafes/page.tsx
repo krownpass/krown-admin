@@ -119,7 +119,7 @@ export default function AdminCafeListPage() {
             },
             cancel: {
                 label: "Cancel",
-                onClick: () => toast.dismiss(), // ✅ Fixes the type error
+                onClick: () => toast.dismiss(),
             },
         });
     };
