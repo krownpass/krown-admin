@@ -164,6 +164,12 @@ export function AdminSidebarMinimal({
               className="overflow-hidden"
             >
               <Link
+                href="/admin/dashboard/krown/stories"
+                className="block pl-8 py-1 text-sm hover:underline"
+              >
+                Stories
+              </Link>
+              <Link
                 href="#"
                 className="block pl-8 py-1 text-sm hover:underline"
               >
