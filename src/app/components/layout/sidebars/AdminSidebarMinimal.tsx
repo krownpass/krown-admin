@@ -60,154 +60,6 @@ export function AdminSidebarMinimal({
             }}
             className="h-screen border-r flex flex-col bg-background overflow-hidden"
         >
-<<<<<<< HEAD
-          <Home className="size-4" />
-          {!collapsed && <span>Home</span>}
-        </Link>
-
-        {/* Cafes Menu */}
-        <button
-          onClick={() => setCafesOpen(!cafesOpen)}
-          className="flex items-center gap-3 px-2 py-2 hover:bg-muted w-full text-left"
-        >
-          <Store className="size-4" />
-          {!collapsed && <span>Cafes</span>}
-          {!collapsed && (
-            <ChevronDown
-              className={`ml-auto size-4 transform transition-transform ${
-                cafesOpen ? "rotate-180" : ""
-              }`}
-            />
-          )}
-        </button>
-
-        <AnimatePresence>
-          {!collapsed && cafesOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden"
-            >
-              <Link
-                href="/admin/dashboard/cafes"
-                className="block pl-8 py-1 text-sm hover:underline"
-              >
-                All Cafes
-              </Link>
-              <Link
-                href="/admin/dashboard/cafes/create/cafe"
-                className="block pl-8 py-1 text-sm hover:underline"
-              >
-                Create Cafe
-              </Link>
-              <Link
-                href="/admin/dashboard/cafes/create/users"
-                className="block pl-8 py-1 text-sm hover:underline"
-              >
-                Create Cafe Users
-              </Link>
-              <Link
-                href="/admin/dashboard/cafes/update/"
-                className="block pl-8 py-1 text-sm hover:underline"
-              >
-                Update Cafe Users
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Krown Menu */}
-        <button
-          onClick={() => setKrownOpen(!krownOpen)}
-          className="flex items-center gap-3 px-2 py-2 hover:bg-muted w-full text-left"
-        >
-          <Crown className="size-4" />
-          {!collapsed && <span>Krown</span>}
-          {!collapsed && (
-            <ChevronDown
-              className={`ml-auto size-4 transform transition-transform ${
-                krownOpen ? "rotate-180" : ""
-              }`}
-            />
-          )}
-        </button>
-
-        <AnimatePresence>
-          {!collapsed && krownOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden"
-            >
-              <Link
-                href="/admin/dashboard/krown/stories"
-                className="block pl-8 py-1 text-sm hover:underline"
-              >
-                Stories
-              </Link>
-              <Link
-                href="#"
-                className="block pl-8 py-1 text-sm hover:underline"
-              >
-                Banners
-              </Link>
-              <Link
-                href="#"
-                className="block pl-8 py-1 text-sm hover:underline"
-              >
-                Rewards
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Other links */}
-        <Link
-          href="/admin/dashboard/analytics"
-          className="flex items-center gap-3 px-2 py-2 hover:bg-muted"
-        >
-          <BarChart className="size-4" />
-          {!collapsed && <span>Analytics</span>}
-        </Link>
-
-        <Link
-          href="/admin/dashboard/settings"
-          className="flex items-center gap-3 px-2 py-2 hover:bg-muted"
-        >
-          <Settings className="size-4" />
-          {!collapsed && <span>Settings</span>}
-        </Link>
-      </nav>
-
-      {/* Footer */}
-      <div className="p-3 border-t">
-        <button
-          className={
-            "flex items-center w-full gap-2 px-2 py-2 hover:bg-muted " +
-            (collapsed ? "justify-center" : "")
-          }
-        >
-          <Avatar className="h-8 w-8">
-            <AvatarFallback>
-              {admin?.name?.charAt(0)?.toUpperCase() || "A"}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="grid text-left text-sm">
-              <span className="truncate font-medium">
-                {admin?.name || "Unknown"}
-              </span>
-              <span className="text-xs">
-                {admin?.role === "master_admin" ? "Master Admin" : "Admin"}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {admin?.phone}
-              </span>
-=======
             {/* Header */}
             <div className="flex h-14 items-center justify-between px-3 border-b">
                 <div className="flex items-center gap-2">
@@ -222,7 +74,6 @@ export function AdminSidebarMinimal({
                         Hide
                     </button>
                 )}
->>>>>>> origin/main
             </div>
 
             {/* Navigation */}
@@ -317,7 +168,19 @@ export function AdminSidebarMinimal({
                             >
                                 Banners
                             </Link>
+                            <Link
+                                href="/admin/dashboard/krown/stories"
+                                className="block pl-8 py-1 text-sm hover:underline"
+                            >
+                                Stories
+                            </Link>
 
+                            <Link
+                                href="/admin/dashboard/krown/influencers"
+                                className="block pl-8 py-1 text-sm hover:underline"
+                            >
+                                Influencers
+                            </Link>
                             <Link
                                 href="/admin/dashboard/notifications"
                                 className="block pl-8 py-1 text-sm hover:underline"
