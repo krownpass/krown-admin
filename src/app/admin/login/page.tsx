@@ -86,10 +86,11 @@ export default function AdminAuthPage() {
                 session_id: form.session_id,
             });
 
-            const token = res.data?.data?.token;
-            if (!token) return toast.error("OTP verification failed");
+            const token = res.data?.data?.access_token;
+            const accessToken = token;
+            if (!accessToken) return toast.error("OTP verification failed");
 
-            setToken(token);
+            setToken(accessToken);
             toast.success("Login successful!");
             router.push("/admin/dashboard");
         } catch (err: any) {
@@ -145,8 +146,7 @@ export default function AdminAuthPage() {
                 phone: form.phone,
                 recovery_pass: form.recovery_pass,
             });
-
-            const token = res.data?.data?.token;
+            const token = res.data?.data?.access_token;
             if (!token) return toast.error("Recovery login failed");
 
             setToken(token);
