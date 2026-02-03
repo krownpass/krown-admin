@@ -10,11 +10,13 @@ import {
     Store,
     Crown,
     BarChart,
+    BarChart3,
     Settings,
     MoreVertical,
     LogOut,
     ChevronDown,
-    BellOff
+    BellOff,
+    Users
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import api from "@/lib/api";
@@ -211,6 +213,22 @@ export function AdminSidebarMinimal({
                 >
                     <BarChart className="size-4" />
                     {!collapsed && <span>Analytics</span>}
+                </Link>
+
+                <Link
+                    href="/admin/dashboard/adminanalytics"
+                    className="flex items-center gap-3 px-2 py-2 hover:bg-muted"
+                >
+                    <BarChart3 className="size-4" />
+                    {!collapsed && <span>Admin Analytics</span>}
+                </Link>
+
+                <Link
+                    href="/admin/dashboard/user-analytics"
+                    className="flex items-center gap-3 px-2 py-2 hover:bg-muted"
+                >
+                    <Users className="size-4" />
+                    {!collapsed && <span>User Analytics</span>}
                 </Link>
 
                 <Link
