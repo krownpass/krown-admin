@@ -19,8 +19,8 @@ export function RevenueChart({ data }: { data: any[] }) {
             </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ResponsiveContainer width="100%" height={350}>
+      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6 h-[350px]">
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-100" />
             <XAxis 

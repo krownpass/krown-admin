@@ -14,7 +14,7 @@ export function OperationalMetrics({ data }: { data: any }) {
   const leadTimeBgColor = isGoodLeadTime ? "bg-emerald-50 border-emerald-100" : "bg-amber-50 border-amber-100";
 
   return (
-    <Card className="col-span-1 border border-slate-200/70 shadow-sm bg-white">
+    <Card className="col-span-1 border border-slate-200/70 shadow-sm bg-white h-full">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-slate-900">
           Operational Metrics

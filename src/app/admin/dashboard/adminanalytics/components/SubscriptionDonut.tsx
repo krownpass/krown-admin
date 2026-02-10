@@ -21,7 +21,7 @@ export function SubscriptionDonut({ data }: { data: any }) {
   const expiredPercentage = total > 0 ? ((expired / total) * 100).toFixed(1) : "0";
 
   return (
-    <Card className="col-span-1 border border-slate-200/70 shadow-sm bg-white">
+    <Card className="col-span-1 border border-slate-200/70 shadow-sm bg-white h-full">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-slate-900">
           Subscription Health

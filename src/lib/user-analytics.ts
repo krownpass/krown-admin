@@ -35,6 +35,11 @@ export interface UserAnalyticsData {
     accepted_count: number;
     visited_count: number;
   };
+  redemptionRate: any;
+  visitorLoyalty: {
+    new_visitors: number;
+    returning_visitors: number;
+  };
 }
 
 export const getUserAnalyticsData = async (
@@ -54,6 +59,8 @@ export const getUserAnalyticsData = async (
     timeToActionRes,
     subHealthRes,
     bookingFunnelRes,
+    redemptionRateRes,
+    loyaltyRes,
   ] = await Promise.all([
     api.get("/krown/user/total"),
     api.get("/krown/user/active", { params: { range, from, to } }),
@@ -65,6 +72,8 @@ export const getUserAnalyticsData = async (
     api.get("/krown/user/time-to-action"),
     api.get("/krown/user/subscription-health"),
     api.get("/krown/user/booking-funnel", { params: { range, from, to } }),
+    api.get("/krown/user/redemption-rate", { params: { range, from, to } }),
+    api.get("/krown/user/loyalty", { params: { range, from, to } }),
   ]);
 
   return {
@@ -78,5 +87,10 @@ export const getUserAnalyticsData = async (
     timeToFirstAction: timeToActionRes.data,
     subscriptionHealth: subHealthRes.data,
     bookingFunnel: bookingFunnelRes.data,
+    redemptionRate: redemptionRateRes.data,
+    visitorLoyalty: {
+        new_visitors: Number(loyaltyRes.data.new_visitors),
+        returning_visitors: Number(loyaltyRes.data.returning_visitors),
+    },
   } as UserAnalyticsData;
 };

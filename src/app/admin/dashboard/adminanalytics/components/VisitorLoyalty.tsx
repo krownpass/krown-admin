@@ -13,7 +13,7 @@ export function VisitorLoyalty({ data }: { data: any }) {
   const retPct = total > 0 ? 100 - newPct : 0;
 
   return (
-    <Card className="col-span-1 border border-slate-200/70 shadow-sm bg-white">
+    <Card className="col-span-1 border border-slate-200/70 shadow-sm bg-white h-full">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-slate-900">
           Visitor Loyalty
