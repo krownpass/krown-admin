@@ -7,7 +7,7 @@ import { Trophy, Store } from "lucide-react";
 
 export function CafeLeaderboard({ data }: { data: any[] }) {
   return (
-    <Card className="shadow-sm border border-slate-200/70 h-full flex flex-col bg-white">
+    <Card className="shadow-sm border border-slate-200/70 flex flex-col bg-white">
       <CardHeader className="flex flex-row items-center justify-between border-b py-4 pb-3">
         <div>
             <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">

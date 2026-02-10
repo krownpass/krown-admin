@@ -38,6 +38,8 @@ import {
 import dynamic from "next/dynamic";
 import { SubscriptionDonut } from "./components/SubscriptionDonut";
 import { BookingFunnel } from "./components/BookingFunnel";
+import { RedemptionMetrics } from "./components/RedemptionMetrics";
+import { VisitorLoyaltyDonut } from "./components/VisitorLoyaltyDonut";
 
 const UserHeatmap = dynamic(
   () => import("./components/UserHeatmap"),
@@ -182,7 +184,7 @@ export default function UserAnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Visitor Signup Ratio */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -233,6 +235,18 @@ export default function UserAnalyticsPage() {
               expired: data?.subscriptionHealth?.expired_subscriptions || 0,
             }}
           />
+        )}
+
+        {/* Visitor Loyalty */}
+        {isLoading ? (
+            <Skeleton className="h-[350px] w-full rounded-xl" />
+        ) : (
+            <VisitorLoyaltyDonut
+                data={{
+                    new_visitors: data?.visitorLoyalty?.new_visitors || 0,
+                    returning_visitors: data?.visitorLoyalty?.returning_visitors || 0,
+                }}
+            />
         )}
       </div>
 
@@ -350,6 +364,13 @@ export default function UserAnalyticsPage() {
           <Skeleton className="h-[350px] w-full rounded-xl" />
         ) : (
           <BookingFunnel data={data?.bookingFunnel} />
+        )}
+
+        {/* Redemption Metrics */}
+        {isLoading ? (
+          <Skeleton className="h-[350px] w-full rounded-xl" />
+        ) : (
+          <RedemptionMetrics data={data?.redemptionRate} />
         )}
       </div>
 

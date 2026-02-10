@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Sub-components (we'll update their styles next)
+import { SearchStats } from "./components/SearchStats";
 import { RevenueChart } from "./components/RevenueChart";
 import { BookingFunnel } from "./components/BookingFunnel";
 import { CafeLeaderboard } from "./components/CafeLeaderboard";
@@ -47,7 +48,6 @@ export default function AnalyticsPage() {
       setError("");
       try {
         const stats = await getAdminDashboardStats(range);
-        console.log("Analytics Component State:", stats);
         setData(stats);
       } catch (err) {
         console.error(err);
@@ -183,9 +183,10 @@ export default function AnalyticsPage() {
 
         {/* ROW 2: Leaderboard & Metrics */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-           {/* Leaderboard - Takes 1 col */}
-           <div className="xl:col-span-1">
+           {/* Leaderboard & Search Stats - Takes 1 col */}
+           <div className="xl:col-span-1 space-y-6">
                 {data && <CafeLeaderboard data={data.cafeLeaderboard} />}
+                {data && <SearchStats data={data.searchStats} />}
            </div>
            
            {/* Metrics Grid - Takes 2 cols (displayed as 2x2 grid) */}

@@ -49,10 +49,20 @@ export interface AnalyticsData {
     userMobile: string;
     cafeName: string;
   }[];
+  searchStats: SearchAnalyticsData;
 }
 
 export const getAdminDashboardStats = async (range: string = "7d"): Promise<AnalyticsData> => {
   const response = await api.get(`/krown/admin/dashboard?range=${range}`);
-  console.log("Admin Dashboard API Response (Frontend):", JSON.stringify(response.data, null, 2));
   return response.data.data; // The backend returns { success: true, data: { ... } }
+};
+
+export interface SearchAnalyticsData {
+  topKeywords: { keyword: string; total_count: string }[];
+  zeroResults: { keyword: string; count: string }[];
+}
+
+export const getSearchStats = async (): Promise<SearchAnalyticsData> => {
+  const response = await api.get("/krown/search-stats");
+  return response.data;
 };
