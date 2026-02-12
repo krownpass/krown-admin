@@ -34,6 +34,7 @@ import { OperationalMetrics } from "./components/OperationalMetrics";
 import { SubscriptionDonut } from "./components/SubscriptionDonut";
 import { VisitorLoyalty } from "./components/VisitorLoyalty";
 import { RecentBookingsTable } from "./components/RecentBookingsTable";
+import ExperienceMetrics from "@/app/components/ExperienceMetrics";
 
 export default function AnalyticsPage() {
   const [range, setRange] = useState("7d");
@@ -196,6 +197,11 @@ export default function AnalyticsPage() {
                {data && <SubscriptionDonut data={data.subscriptionHealth} />}
                {data && <VisitorLoyalty data={data.visitorRetention} />}
            </div>
+        </div>
+
+        {/* Experience Metrics */}
+        <div className="w-full mt-6">
+            <ExperienceMetrics range={range} />
         </div>
 
         {/* ROW 3: Recent Bookings Table with Search */}
