@@ -25,7 +25,6 @@ export function useAdmin() {
 
         api.get("/admin/me")
             .then((res) => {
-                console.log("/admin/me Response:", res.data);
                 setAdmin(res.data?.data ?? null);  // FIXED
             })
             .catch((err) => {

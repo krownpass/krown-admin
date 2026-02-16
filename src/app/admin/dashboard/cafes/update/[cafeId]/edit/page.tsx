@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,8 +35,8 @@ export default function AdminCafeUpdatePage() {
             cafe_upi_id: "",
             opening_time: "",
             closing_time: "",
-            cafe_latitude: undefined,
-            cafe_longitude: undefined,
+            latitude: undefined,
+            longitude: undefined,
             working_days: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
         },
     });
@@ -50,10 +50,11 @@ export default function AdminCafeUpdatePage() {
                 api.get(`/cafes/${cafeId}`),
                 api.get(`/cafes/${cafeId}/images`),
             ]);
-            return {
-                cafe: cafeRes.data.data,
-                images: imgRes.data.data || [],
-            };
+
+            const cafe = cafeRes.data?.data ?? cafeRes.data;
+            const images = imgRes.data?.data ?? imgRes.data;
+
+            return { cafe, images }
         },
     });
 
@@ -76,6 +77,8 @@ export default function AdminCafeUpdatePage() {
 
             const parsed: UpdateCafeInput = {
                 ...data.cafe,
+                opening_time: data.cafe.opening_time?.slice(0, 5) ?? "",
+                closing_time: data.cafe.closing_time?.slice(0, 5) ?? "",
                 working_days: normalized.filter((d) =>
                     ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].includes(d)
                 ) as (
@@ -93,7 +96,17 @@ export default function AdminCafeUpdatePage() {
         }
     }, [data, form]);
     // ---------- Extract images ----------
-    const images = data?.images ?? [];
+    const images = useMemo(() => {
+        if (!data?.images) return [];
+
+        const { main, gallery, menu } = data.images;
+
+        return [
+            ...(main?.images ?? []),
+            ...(gallery?.images ?? []),
+            ...(menu?.images ?? []),
+        ];
+    }, [data]);
 
     // ---------- Debug watcher ----------
     useEffect(() => {
@@ -195,21 +208,21 @@ export default function AdminCafeUpdatePage() {
                         {/* ---------- Lat / Long ---------- */}
                         <div className="flex gap-3">
                             <div className="w-1/2">
-                                <Label htmlFor="cafe_latitude">Latitude</Label>
+                                <Label htmlFor="latitude">Latitude</Label>
                                 <Input
                                     type="number"
                                     step="any"
-                                    id="cafe_latitude"
-                                    {...form.register("cafe_latitude", { valueAsNumber: true })}
+                                    id="latitude"
+                                    {...form.register("latitude", { valueAsNumber: true })}
                                 />
                             </div>
                             <div className="w-1/2">
-                                <Label htmlFor="cafe_longitude">Longitude</Label>
+                                <Label htmlFor="longitude">Longitude</Label>
                                 <Input
                                     type="number"
                                     step="any"
-                                    id="cafe_longitude"
-                                    {...form.register("cafe_longitude", { valueAsNumber: true })}
+                                    id="longitude"
+                                    {...form.register("longitude", { valueAsNumber: true })}
                                 />
                             </div>
                         </div>

@@ -16,6 +16,15 @@ export const CreateCafeSchema = z.object({
         .string()
         .regex(/^\+?\d{10,15}$/, "Invalid phone number format"),
     cafe_upi_id: z.string().min(5, "Valid UPI ID required"),
+    latitude: z.preprocess(
+        (val) => Number(val),
+        z.number().min(-90).max(90)
+    ),
+
+    longitude: z.preprocess(
+        (val) => Number(val),
+        z.number().min(-180).max(180)
+    ),
     opening_time: z
         .string()
         .regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format (HH:MM)"),
@@ -37,26 +46,15 @@ export const UpdateCafeSchema = z.object({
     opening_time: z.string().optional(),
     closing_time: z.string().optional(),
 
-    cafe_latitude: z
-        .preprocess(
-            (val): number | undefined =>
-                val === "" || val === null || val === undefined
-                    ? undefined
-                    : Number(val),
-            z.number().optional()
-        )
-        .optional(),
+    latitude: z.preprocess(
+        (val) => Number(val),
+        z.number().min(-90).max(90)
+    ),
 
-    cafe_longitude: z
-        .preprocess(
-            (val): number | undefined =>
-                val === "" || val === null || val === undefined
-                    ? undefined
-                    : Number(val),
-            z.number().optional()
-        )
-        .optional(),
-
+    longitude: z.preprocess(
+        (val) => Number(val),
+        z.number().min(-180).max(180)
+    ),
     working_days: z
         .array(z.enum(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]))
         .min(1, "Select at least one working day")
