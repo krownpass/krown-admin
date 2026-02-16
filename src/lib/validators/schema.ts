@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 export const CreateCafeUserSchema = z.object({
     user_name: z.string().min(4, "Minimum 4 characters required").max(15, "Maximum 15 characters allowed"),
     user_email: z.string().email("Invalid email address"),
@@ -16,15 +16,8 @@ export const CreateCafeSchema = z.object({
         .string()
         .regex(/^\+?\d{10,15}$/, "Invalid phone number format"),
     cafe_upi_id: z.string().min(5, "Valid UPI ID required"),
-    latitude: z.preprocess(
-        (val) => Number(val),
-        z.number().min(-90).max(90)
-    ),
-
-    longitude: z.preprocess(
-        (val) => Number(val),
-        z.number().min(-180).max(180)
-    ),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
     opening_time: z
         .string()
         .regex(/^\d{2}:\d{2}(:\d{2})?$/, "Invalid time format (HH:MM)"),
@@ -46,15 +39,8 @@ export const UpdateCafeSchema = z.object({
     opening_time: z.string().optional(),
     closing_time: z.string().optional(),
 
-    latitude: z.preprocess(
-        (val) => Number(val),
-        z.number().min(-90).max(90)
-    ),
-
-    longitude: z.preprocess(
-        (val) => Number(val),
-        z.number().min(-180).max(180)
-    ),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
     working_days: z
         .array(z.enum(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]))
         .min(1, "Select at least one working day")
