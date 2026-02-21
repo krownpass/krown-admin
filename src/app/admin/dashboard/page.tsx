@@ -223,6 +223,18 @@ export default function DashboardPage() {
         refetchOnWindowFocus: false,
     });
 
+    /* MODAL SEARCH */
+    const [showNewModal, setShowNewModal] = useState(false);
+    const [newSearch, setNewSearch] = useState("");
+
+    const filteredNewUsers = useMemo(() => {
+        return (data?.allNewUsers ?? []).filter((u) =>
+            `${u.user_name} ${u.user_email} ${u.user_mobile_no}`
+                .toLowerCase()
+                .includes(newSearch.toLowerCase())
+        );
+    }, [newSearch, data]);
+
     if (isError) {
         return (
             <div className="flex flex-col items-center justify-center py-10 text-red-500">
@@ -257,18 +269,6 @@ export default function DashboardPage() {
                 h.count > max.count ? h : max
             )
             : null;
-
-    /* MODAL SEARCH */
-    const [showNewModal, setShowNewModal] = useState(false);
-    const [newSearch, setNewSearch] = useState("");
-
-    const filteredNewUsers = useMemo(() => {
-        return (data?.allNewUsers ?? []).filter((u) =>
-            `${u.user_name} ${u.user_email} ${u.user_mobile_no}`
-                .toLowerCase()
-                .includes(newSearch.toLowerCase())
-        );
-    }, [newSearch, data]);
 
     /* ======================================================
         UI START

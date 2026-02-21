@@ -16,7 +16,8 @@ import {
     LogOut,
     ChevronDown,
     BellOff,
-    Users
+    Users,
+    ShieldCheck
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import api from "@/lib/api";
@@ -201,6 +202,15 @@ export function AdminSidebarMinimal({
                                 className="block pl-8 py-1 text-sm hover:underline"
                             >
                                 Subscriptions
+                            </Link>
+                            <Link
+                                href="/admin/dashboard/krown"
+                                className="block pl-8 py-1 text-sm hover:underline"
+                            >
+                                <span className="inline-flex items-center gap-1">
+                                    <ShieldCheck className="size-3.5" />
+                                    Organizers
+                                </span>
                             </Link>
                         </motion.div>
                     )}
