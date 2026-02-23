@@ -4,7 +4,7 @@ import { getToken, setToken, clearToken } from "./auth";
 
 const api = axios.create({
     baseURL: `${process.env.NEXT_PUBLIC_BACKEND_API}/api`,
-    withCredentials: true, 
+    withCredentials: true,
 });
 // Automatically inject token before every request
 api.interceptors.request.use((config) => {
@@ -28,7 +28,7 @@ api.interceptors.response.use(
             try {
                 const res = await axios.post(
                     `${process.env.NEXT_PUBLIC_BACKEND_API}/api/admin/refresh-token`,
-                    {}, 
+                    {},
                     { withCredentials: true }
                 );
                 const { token } = res.data.data || res.data;

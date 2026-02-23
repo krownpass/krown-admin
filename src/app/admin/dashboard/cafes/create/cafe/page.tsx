@@ -5,12 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { z } from "zod";
+
 import api from "@/lib/api";
 import { CreateCafeInput, CreateCafeSchema } from "@/lib/validators/schema";
 
@@ -20,7 +21,7 @@ export default function CreateCafePage() {
         handleSubmit,
         formState: { errors },
         reset,
-    } = useForm({
+    } = useForm<z.infer<typeof CreateCafeSchema>>({
         resolver: zodResolver(CreateCafeSchema),
         defaultValues: {
             cafe_name: "",
@@ -57,129 +58,131 @@ export default function CreateCafePage() {
     });
 
     const onSubmit = (data: z.infer<typeof CreateCafeSchema>) => {
+        createCafe.mutate(data);
+    };
 
-        return (
-            <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="w-full"
-            >
-                <h1 className="text-4xl font-bebas mb-8">
-                    Create Cafés
-                </h1>
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full px-4 py-6"
+        >
+            <h1 className="text-4xl font-bebas mb-8">
+                Create Café
+            </h1>
 
-                <div className="flex justify-center">
-                    <form
-                        onSubmit={handleSubmit(onSubmit)}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl"
-                    >
-                        {/* Name */}
-                        <div className="space-y-2">
-                            <Label>Café Name</Label>
-                            <Input {...register("cafe_name")} />
-                            {errors.cafe_name && (
-                                <p className="text-red-600 text-sm">
-                                    {errors.cafe_name.message}
-                                </p>
-                            )}
-                        </div>
+            <div className="flex justify-center">
+                <form
+                    onSubmit={handleSubmit(onSubmit)}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl"
+                >
+                    {/* Café Name */}
+                    <div className="space-y-2">
+                        <Label>Café Name</Label>
+                        <Input {...register("cafe_name")} />
+                        {errors.cafe_name && (
+                            <p className="text-red-600 text-sm">
+                                {errors.cafe_name.message}
+                            </p>
+                        )}
+                    </div>
 
-                        {/* Location */}
-                        <div className="space-y-2">
-                            <Label>Café Location</Label>
-                            <Input {...register("cafe_location")} />
-                            {errors.cafe_location && (
-                                <p className="text-red-600 text-sm">
-                                    {errors.cafe_location.message}
-                                </p>
-                            )}
-                        </div>
+                    {/* Location */}
+                    <div className="space-y-2">
+                        <Label>Café Location</Label>
+                        <Input {...register("cafe_location")} />
+                        {errors.cafe_location && (
+                            <p className="text-red-600 text-sm">
+                                {errors.cafe_location.message}
+                            </p>
+                        )}
+                    </div>
 
-                        {/* Description */}
-                        <div className="space-y-2 md:col-span-2">
-                            <Label>Description</Label>
-                            <Textarea {...register("cafe_description")} />
-                        </div>
+                    {/* Description */}
+                    <div className="space-y-2 md:col-span-2">
+                        <Label>Description</Label>
+                        <Textarea {...register("cafe_description")} />
+                    </div>
 
-                        {/* Phone */}
-                        <div className="space-y-2">
-                            <Label>Phone</Label>
-                            <Input {...register("cafe_mobile_no")} />
-                            {errors.cafe_mobile_no && (
-                                <p className="text-red-600 text-sm">
-                                    {errors.cafe_mobile_no.message}
-                                </p>
-                            )}
-                        </div>
+                    {/* Phone */}
+                    <div className="space-y-2">
+                        <Label>Phone</Label>
+                        <Input {...register("cafe_mobile_no")} />
+                        {errors.cafe_mobile_no && (
+                            <p className="text-red-600 text-sm">
+                                {errors.cafe_mobile_no.message}
+                            </p>
+                        )}
+                    </div>
 
-                        {/* UPI */}
-                        <div className="space-y-2">
-                            <Label>UPI ID</Label>
-                            <Input {...register("cafe_upi_id")} />
-                            {errors.cafe_upi_id && (
-                                <p className="text-red-600 text-sm">
-                                    {errors.cafe_upi_id.message}
-                                </p>
-                            )}
-                        </div>
+                    {/* UPI ID */}
+                    <div className="space-y-2">
+                        <Label>UPI ID</Label>
+                        <Input {...register("cafe_upi_id")} />
+                        {errors.cafe_upi_id && (
+                            <p className="text-red-600 text-sm">
+                                {errors.cafe_upi_id.message}
+                            </p>
+                        )}
+                    </div>
 
-                        {/* Opening */}
-                        <div className="space-y-2">
-                            <Label>Opening Time</Label>
-                            <Input type="time" {...register("opening_time")} />
-                        </div>
+                    {/* Opening Time */}
+                    <div className="space-y-2">
+                        <Label>Opening Time</Label>
+                        <Input type="time" {...register("opening_time")} />
+                    </div>
 
-                        {/* Closing */}
-                        <div className="space-y-2">
-                            <Label>Closing Time</Label>
-                            <Input type="time" {...register("closing_time")} />
-                        </div>
+                    {/* Closing Time */}
+                    <div className="space-y-2">
+                        <Label>Closing Time</Label>
+                        <Input type="time" {...register("closing_time")} />
+                    </div>
 
-                        {/* Latitude */}
-                        <div className="space-y-2">
-                            <Label>Latitude</Label>
-                            <Input
-                                type="number"
-                                step="any"
-                                {...register("latitude", { valueAsNumber: true })}
-                            />
-                            {errors.latitude && (
-                                <p className="text-red-600 text-sm">
-                                    {errors.latitude.message}
-                                </p>
-                            )}
-                        </div>
+                    {/* Latitude */}
+                    <div className="space-y-2">
+                        <Label>Latitude</Label>
+                        <Input
+                            type="number"
+                            step="any"
+                            {...register("latitude", { valueAsNumber: true })}
+                        />
+                        {errors.latitude && (
+                            <p className="text-red-600 text-sm">
+                                {errors.latitude.message}
+                            </p>
+                        )}
+                    </div>
 
-                        {/* Longitude */}
-                        <div className="space-y-2">
-                            <Label>Longitude</Label>
-                            <Input
-                                type="number"
-                                step="any"
-                                {...register("longitude", { valueAsNumber: true })}
-                            />
-                            {errors.longitude && (
-                                <p className="text-red-600 text-sm">
-                                    {errors.longitude.message}
-                                </p>
-                            )}
-                        </div>
+                    {/* Longitude */}
+                    <div className="space-y-2">
+                        <Label>Longitude</Label>
+                        <Input
+                            type="number"
+                            step="any"
+                            {...register("longitude", { valueAsNumber: true })}
+                        />
+                        {errors.longitude && (
+                            <p className="text-red-600 text-sm">
+                                {errors.longitude.message}
+                            </p>
+                        )}
+                    </div>
 
-                        {/* Submit */}
-                        <div className="md:col-span-2 flex justify-center pt-6">
-                            <Button
-                                type="submit"
-                                disabled={createCafe.isPending}
-                            >
-                                {createCafe.isPending
-                                    ? "Creating..."
-                                    : "Create Café"}
-                            </Button>
-                        </div>
-                    </form>
-                </div>
-            </motion.div>
-        );
-    }
+                    {/* Submit Button */}
+                    <div className="md:col-span-2 flex justify-center pt-6">
+                        <Button
+                            type="submit"
+                            disabled={createCafe.isPending}
+                            className="min-w-[200px]"
+                        >
+                            {createCafe.isPending
+                                ? "Creating..."
+                                : "Create Café"}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </motion.div>
+    );
 }
