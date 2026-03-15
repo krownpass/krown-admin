@@ -198,6 +198,12 @@ export function AdminSidebarMinimal({
                             </Link>
 
                             <Link
+                                href="/admin/dashboard/krown/sections"
+                                className="block pl-8 py-1 text-sm hover:underline"
+                            >
+                                Sections
+                            </Link>
+                            <Link
                                 href="/admin/dashboard/krown/subscriptions"
                                 className="block pl-8 py-1 text-sm hover:underline"
                             >
