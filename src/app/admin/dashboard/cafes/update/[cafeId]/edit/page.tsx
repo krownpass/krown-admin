@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Upload, Trash2 } from "lucide-react";
 import { UpdateCafeSchema, UpdateCafeInput } from "@/lib/validators/schema";
 import CafeUsersTable from "./CafeUsers";
+import CafeItemsTable from "./CafeItemsTable";
 
 // ---------- Component ----------
 export default function AdminCafeUpdatePage() {
@@ -374,6 +375,7 @@ export default function AdminCafeUpdatePage() {
             </motion.div>
 
             <CafeUsersTable cafeId={cafeId} />
+            <CafeItemsTable cafeId={cafeId} />
         </>
     );
 }
