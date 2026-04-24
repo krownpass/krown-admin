@@ -216,6 +216,12 @@ export function AdminSidebarMinimal({
                                 Buzz Items
                             </Link>
                             <Link
+                                href="/admin/dashboard/krown/overview"
+                                className="block pl-8 py-1 text-sm hover:underline"
+                            >
+                                Home Preview
+                            </Link>
+                            <Link
                                 href="/admin/dashboard/krown/subscriptions"
                                 className="block pl-8 py-1 text-sm hover:underline"
                             >

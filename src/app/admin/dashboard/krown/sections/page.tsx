@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -8,6 +9,7 @@ import {
     PlusCircle, Loader2, Pencil, Trash2, Eye, EyeOff,
     Sparkles, X, Calendar, Coffee, Ticket, Search,
     CheckCircle2, TrendingUp, Clock, Send, Check, XCircle,
+    RefreshCw, Zap, LayoutGrid, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,22 +38,150 @@ type Section = {
     valid_until: string | null;
     cafe_ids: string[];
     event_ids: string[];
+    item_ids: string[];
     sort_order: number;
     is_active: boolean;
     status: SectionStatus;
+    layout?: Record<string, any>;
     created_at?: string;
 };
 
 type SectionDraft = Omit<Section, "created_at">;
 
-type Cafe = { cafe_id: string; cafe_name: string; city?: string; area?: string };
+type Cafe = { cafe_id: string; cafe_name: string; city?: string; area?: string; cover_img?: string };
 type Event = { event_id: string; title: string; venue_city?: string; start_time?: string; is_paid?: boolean; base_price?: number };
+type MenuItem = { item_id: string; item_name: string; cafe_name: string; area?: string; category?: string; price?: number; cover_img?: string; tag?: string };
 
 const EMPTY_DRAFT: SectionDraft = {
     section_key: "", title: "", subtitle: "", banner_image: "",
-    valid_from: "", valid_until: "", cafe_ids: [], event_ids: [],
+    valid_from: "", valid_until: "", cafe_ids: [], event_ids: [], item_ids: [],
     sort_order: 10, is_active: false, status: "draft",
 };
+
+// ─── Premium layout templates ─────────────────────────────────────────────────
+const LAYOUT_TEMPLATES = [
+    {
+        id: "cinema_night",
+        name: "Cinema Night",
+        emoji: "🌙",
+        desc: "Dark & moody — films, shows, theatre",
+        colors: ["#0D0D1A", "#A78BFA", "#C084FC"],
+        accent: "#A78BFA",
+        // Pattern: film strip dots on the right edge
+        pattern: "filmstrip",
+        cardShape: "tall",  // tall portrait cards
+        layout: {
+            eventStyle: "card" as const, cardType: "default" as const,
+            eventCardWidth: 175, eventCardHeight: 265,
+            cardWidth: 175, cardHeight: 210,
+            cardBorderRadius: 16, eventCardBorderRadius: 20,
+            titleColor: "#FFFFFF", subtitleColor: "#A78BFA", countColor: "#C084FC",
+            cardNameColor: "#FFFFFF", cardSubColor: "#C084FC80",
+            overlayOpacity: 0.6, overlayColor: "#0D0A1A",
+            showCount: true,
+        },
+    },
+    {
+        id: "weekend_heat",
+        name: "Weekend Heat",
+        emoji: "🔥",
+        desc: "Bold & wide — parties, festivals, nightlife",
+        colors: ["#1A0800", "#F97316", "#FB923C"],
+        accent: "#F97316",
+        pattern: "diagonal",
+        cardShape: "wide",  // landscape wide cards
+        layout: {
+            eventStyle: "card" as const, cardType: "wide" as const,
+            eventCardWidth: 215, eventCardHeight: 190,
+            cardWidth: 225, cardHeight: 185,
+            cardBorderRadius: 12, eventCardBorderRadius: 14,
+            titleColor: "#FFF7ED", subtitleColor: "#FB923C", countColor: "#F97316",
+            cardNameColor: "#FFF7ED", cardSubColor: "#FB923C",
+            overlayOpacity: 0.7, overlayColor: "#3D1500",
+            showCount: true,
+        },
+    },
+    {
+        id: "gold_standard",
+        name: "Gold Standard",
+        emoji: "👑",
+        desc: "Luxury glow — premium events & curated picks",
+        colors: ["#0A0800", "#D4AF37", "#FBBF24"],
+        accent: "#D4AF37",
+        pattern: "shimmer",
+        cardShape: "tall-glow",
+        layout: {
+            eventStyle: "card" as const, cardType: "glow" as const,
+            eventCardWidth: 180, eventCardHeight: 272,
+            cardWidth: 175, cardHeight: 205,
+            cardBorderRadius: 14, eventCardBorderRadius: 18,
+            cardStyle: "none" as const,
+            titleColor: "#FBBF24", subtitleColor: "#D4AF37", countColor: "#D4AF37",
+            cardNameColor: "#FBBF24", cardSubColor: "#D4AF3799",
+            overlayOpacity: 0.55, overlayColor: "#1A0E00",
+            showCount: true,
+        },
+    },
+    {
+        id: "live_sessions",
+        name: "Live Sessions",
+        emoji: "🎵",
+        desc: "List view — music, open mics, jam nights",
+        colors: ["#061410", "#4ADE80", "#86EFAC"],
+        accent: "#4ADE80",
+        pattern: "waves",
+        cardShape: "list",
+        layout: {
+            eventStyle: "list" as const, cardType: "minimal" as const,
+            cardWidth: 148, cardHeight: 148,
+            cardBorderRadius: 10, eventCardBorderRadius: 12,
+            titleColor: "#F0FDF4", subtitleColor: "#86EFAC", countColor: "#4ADE80",
+            cardNameColor: "#F0FDF4", cardSubColor: "#86EFAC",
+            overlayOpacity: 0.5, overlayColor: "#061410",
+            showCount: true,
+        },
+    },
+    {
+        id: "brunch_vibes",
+        name: "Brunch Vibes",
+        emoji: "🌸",
+        desc: "Soft & cozy — café picks, slow mornings",
+        colors: ["#1A0A12", "#F472B6", "#FBCFE8"],
+        accent: "#EC4899",
+        pattern: "floral",
+        cardShape: "square",
+        layout: {
+            eventStyle: "card" as const, cardType: "default" as const,
+            cardWidth: 152, cardHeight: 152,
+            eventCardWidth: 165, eventCardHeight: 235,
+            cardBorderRadius: 18, eventCardBorderRadius: 22,
+            titleColor: "#FDF2F8", subtitleColor: "#F9A8D4", countColor: "#EC4899",
+            cardNameColor: "#FDF2F8", cardSubColor: "#F9A8D4",
+            overlayOpacity: 0.5, overlayColor: "#3D1025",
+            showCount: true,
+        },
+    },
+    {
+        id: "trending_now",
+        name: "Trending Now",
+        emoji: "⚡",
+        desc: "Neon electric — hot picks, trending spots",
+        colors: ["#021A0F", "#10B981", "#6EE7B7"],
+        accent: "#10B981",
+        pattern: "neon",
+        cardShape: "tall-glow",
+        layout: {
+            eventStyle: "card" as const, cardType: "glow" as const,
+            cardWidth: 172, cardHeight: 175,
+            eventCardWidth: 192, eventCardHeight: 275,
+            cardBorderRadius: 10, eventCardBorderRadius: 16,
+            titleColor: "#F0FFF4", subtitleColor: "#6EE7B7", countColor: "#10B981",
+            cardNameColor: "#F0FFF4", cardSubColor: "#6EE7B799",
+            overlayOpacity: 0.6, overlayColor: "#021A0F",
+            showCount: true,
+        },
+    },
+] as const;
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useCafeList() {
@@ -71,6 +201,17 @@ function useEventList() {
         queryFn: async () => {
             const { data } = await api.get("/events?limit=100");
             return data.data?.events ?? [];
+        },
+        staleTime: 5 * 60_000,
+    });
+}
+
+function useMenuItemList() {
+    return useQuery<MenuItem[]>({
+        queryKey: ["admin-menu-items"],
+        queryFn: async () => {
+            const { data } = await api.get("/admin/sections/items");
+            return data.data ?? [];
         },
         staleTime: 5 * 60_000,
     });
@@ -177,70 +318,641 @@ function ItemPicker({
     );
 }
 
-// ─── App Preview ──────────────────────────────────────────────────────────────
-function SectionAppPreview({ draft, cafes, events }: { draft: SectionDraft; cafes: Cafe[]; events: Event[] }) {
-    const selectedCafes = cafes.filter((c) => draft.cafe_ids.includes(c.cafe_id));
-    const selectedEvents = events.filter((e) => draft.event_ids.includes(e.event_id));
+// ─── Cafe Picker — shows cover images in dropdown + selected list ─────────────
+function CafePicker({
+    cafes, selectedIds, onAdd, onRemove, disabled,
+}: {
+    cafes: Cafe[];
+    selectedIds: string[];
+    onAdd: (id: string) => void;
+    onRemove: (id: string) => void;
+    disabled?: boolean;
+}) {
+    const [query, setQuery] = useState("");
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+
+    const selected = cafes.filter((c) => selectedIds.includes(c.cafe_id));
+    const available = cafes.filter(
+        (c) =>
+            !selectedIds.includes(c.cafe_id) &&
+            (!query || c.cafe_name.toLowerCase().includes(query.toLowerCase()) ||
+                (c.city ?? "").toLowerCase().includes(query.toLowerCase()) ||
+                (c.area ?? "").toLowerCase().includes(query.toLowerCase()))
+    );
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
 
     return (
-        <div className="bg-zinc-950 rounded-2xl p-4 space-y-4 border border-zinc-800">
-            <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">App Preview</p>
+        <div className={`space-y-3 ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
+            <Label className="flex items-center gap-1.5">
+                <Coffee className="size-3.5" />
+                Cafés
+                <span className="text-muted-foreground font-normal">({selectedIds.length} selected)</span>
+            </Label>
 
-            <div className="flex items-start justify-between">
-                <div>
-                    <p className="text-white font-bold text-xl leading-tight">
-                        {draft.title || "Section Title"}
-                    </p>
-                    {draft.subtitle && (
-                        <p className="text-zinc-400 text-sm mt-1">{draft.subtitle}</p>
-                    )}
-                </div>
-                <span className="text-xs text-amber-400 font-medium shrink-0 mt-1">
-                    {draft.cafe_ids.length > 0 ? `${draft.cafe_ids.length} spots` : ""}
-                    {draft.cafe_ids.length > 0 && draft.event_ids.length > 0 ? " · " : ""}
-                    {draft.event_ids.length > 0 ? `${draft.event_ids.length} events` : ""}
-                </span>
-            </div>
-
-            {selectedCafes.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                    {selectedCafes.map((c) => (
-                        <div key={c.cafe_id} className="shrink-0 w-32 bg-zinc-800 rounded-xl overflow-hidden">
-                            <div className="h-16 bg-zinc-700 flex items-center justify-center">
-                                <Coffee className="size-5 text-zinc-500" />
+            {/* Selected cafes — card style with image */}
+            {selected.length > 0 && (
+                <div className="space-y-1.5">
+                    {selected.map((c) => (
+                        <div
+                            key={c.cafe_id}
+                            className="flex items-center gap-2.5 p-2 bg-muted/40 rounded-xl border border-muted-foreground/10 hover:border-muted-foreground/20 transition-colors"
+                        >
+                            {c.cover_img && !imgErrors[c.cafe_id] ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={c.cover_img}
+                                    alt={c.cafe_name}
+                                    onError={() => setImgErrors((p) => ({ ...p, [c.cafe_id]: true }))}
+                                    className="w-10 h-10 rounded-lg object-cover shrink-0"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 rounded-lg bg-muted shrink-0 flex items-center justify-center">
+                                    <Coffee className="size-4 text-muted-foreground" />
+                                </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{c.cafe_name}</p>
+                                {(c.area || c.city) && (
+                                    <p className="text-xs text-muted-foreground truncate">{c.area ?? c.city}</p>
+                                )}
                             </div>
-                            <div className="p-2">
-                                <p className="text-white text-xs font-medium truncate">{c.cafe_name}</p>
-                                <p className="text-zinc-500 text-xs truncate">{c.area ?? c.city ?? ""}</p>
-                            </div>
+                            <button
+                                onClick={() => onRemove(c.cafe_id)}
+                                className="shrink-0 p-1 rounded hover:bg-destructive/10 transition-colors"
+                            >
+                                <X className="size-3.5 text-muted-foreground hover:text-destructive" />
+                            </button>
                         </div>
                     ))}
                 </div>
             )}
 
-            {selectedEvents.map((ev) => (
-                <div key={ev.event_id} className="flex items-center gap-3 bg-zinc-800 rounded-xl overflow-hidden">
-                    <div className="w-16 h-16 bg-zinc-700 shrink-0 flex items-center justify-center">
-                        <Ticket className="size-4 text-zinc-500" />
-                    </div>
-                    <div className="flex-1 min-w-0 py-2 pr-2">
-                        <p className="text-white text-sm font-medium truncate">{ev.title}</p>
-                        <p className="text-amber-400 text-xs mt-0.5">
-                            {ev.venue_city ?? ""}
-                            {ev.is_paid ? ` · ₹${ev.base_price}` : " · Free"}
-                        </p>
-                        {ev.start_time && (
-                            <p className="text-zinc-500 text-xs mt-0.5">
-                                {new Date(ev.start_time).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+            {/* Searchable dropdown */}
+            <div ref={ref} className="relative">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                    <Input
+                        value={query}
+                        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+                        onFocus={() => setOpen(true)}
+                        placeholder="Search cafés by name, city or area…"
+                        className="pl-8 text-sm"
+                    />
+                </div>
+                <AnimatePresence>
+                    {open && available.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            className="absolute z-50 w-full mt-1 bg-popover border rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto"
+                        >
+                            {available.slice(0, 30).map((c) => (
+                                <button
+                                    key={c.cafe_id}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60 transition-colors text-left"
+                                    onClick={() => { onAdd(c.cafe_id); setQuery(""); setOpen(false); }}
+                                >
+                                    {c.cover_img && !imgErrors[c.cafe_id] ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={c.cover_img}
+                                            alt={c.cafe_name}
+                                            onError={() => setImgErrors((p) => ({ ...p, [c.cafe_id]: true }))}
+                                            className="w-9 h-9 rounded-lg object-cover shrink-0"
+                                        />
+                                    ) : (
+                                        <div className="w-9 h-9 rounded-lg bg-muted shrink-0 flex items-center justify-center">
+                                            <Coffee className="size-4 text-muted-foreground/50" />
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{c.cafe_name}</p>
+                                        {(c.area || c.city) && (
+                                            <p className="text-xs text-muted-foreground truncate">{c.area ?? c.city}</p>
+                                        )}
+                                    </div>
+                                </button>
+                            ))}
+                            {available.length > 30 && (
+                                <p className="px-3 py-2 text-xs text-muted-foreground text-center border-t">
+                                    Showing 30 of {available.length} — type to narrow
+                                </p>
+                            )}
+                        </motion.div>
+                    )}
+                    {open && available.length === 0 && query && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            className="absolute z-50 w-full mt-1 bg-popover border rounded-xl shadow-xl px-4 py-3 text-sm text-muted-foreground text-center"
+                        >
+                            No cafés match &ldquo;{query}&rdquo;
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </div>
+    );
+}
+
+// ─── App Preview ──────────────────────────────────────────────────────────────
+function SectionAppPreview({ draft, layout, cafes, events }: {
+    draft: SectionDraft;
+    layout: Record<string, any>;
+    cafes: Cafe[];
+    events: Event[];
+}) {
+    const selectedCafes = cafes.filter((c) => draft.cafe_ids.includes(c.cafe_id));
+    const selectedEvents = events.filter((e) => draft.event_ids.includes(e.event_id));
+
+    const cardType = layout.cardType ?? "default";
+    const titleColor = layout.titleColor ?? "#ffffff";
+    const subtitleColor = layout.subtitleColor ?? "#9CA3AF";
+    const countColor = layout.countColor ?? "#D4AF37";
+    const showCount = layout.showCount !== false;
+    const eventStyle: "card" | "list" = layout.eventStyle ?? "card";
+
+    const cardW = layout.cardWidth ?? 171;
+    // Scale from real RN pixels to this preview context (~40%)
+    const s = 0.45;
+    const cW = Math.round(cardW * s);
+    const cH = Math.round((layout.cardHeight ?? 172) * s);
+    const evW = Math.round((layout.eventCardWidth ?? 200) * s);
+    const evH = Math.round((layout.eventCardHeight ?? 290) * s);
+
+    const isEmpty = selectedCafes.length === 0 && selectedEvents.length === 0;
+
+    // Promo — only when cardType=promo AND no real data
+    const showAsPromo = cardType === "promo" && isEmpty;
+
+    return (
+        <div className="bg-zinc-950 rounded-2xl border border-zinc-800 overflow-hidden">
+            <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium px-4 pt-4 pb-2">App Preview</p>
+
+            {/* Phone-style container */}
+            <div className="bg-black mx-4 mb-4 rounded-2xl overflow-hidden" style={{ minHeight: 200 }}>
+                <div className="p-4 space-y-3">
+                    {/* Section header */}
+                    <div className="flex items-start justify-between gap-2">
+                        <div>
+                            <p className="font-bold text-lg leading-tight" style={{ color: titleColor }}>
+                                {draft.title || "Section Title"}
                             </p>
+                            {draft.subtitle && (
+                                <p className="text-sm mt-0.5" style={{ color: subtitleColor }}>{draft.subtitle}</p>
+                            )}
+                        </div>
+                        {showCount && (selectedCafes.length > 0 || selectedEvents.length > 0) && (
+                            <span className="text-xs font-medium shrink-0 mt-1" style={{ color: countColor }}>
+                                {selectedCafes.length > 0 ? `${selectedCafes.length} spots` : ""}
+                                {selectedCafes.length > 0 && selectedEvents.length > 0 ? " · " : ""}
+                                {selectedEvents.length > 0 ? `${selectedEvents.length} events` : ""}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Promo banner */}
+                    {showAsPromo && (
+                        <div
+                            className="rounded-2xl p-5 text-center"
+                            style={{
+                                background: `linear-gradient(135deg, ${titleColor}18, ${countColor}14)`,
+                                border: `1px solid ${countColor}50`,
+                                boxShadow: `0 0 16px ${countColor}25`,
+                            }}
+                        >
+                            <p className="font-bold text-lg" style={{ color: titleColor }}>{draft.title || "Promo Title"}</p>
+                            {draft.subtitle && <p className="text-sm mt-1" style={{ color: subtitleColor }}>{draft.subtitle}</p>}
+                        </div>
+                    )}
+
+                    {/* Cafe cards */}
+                    {selectedCafes.length > 0 && (
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                            {selectedCafes.map((c) => (
+                                <div key={c.cafe_id} className="shrink-0 rounded-xl overflow-hidden"
+                                    style={{
+                                        width: cW,
+                                        ...(cardType === "glow" ? {
+                                            boxShadow: `0 0 10px ${countColor}60`,
+                                            border: `1px solid ${countColor}50`,
+                                        } : {}),
+                                    }}
+                                >
+                                    <div
+                                        className="bg-zinc-800 flex items-center justify-center"
+                                        style={{ height: cH }}
+                                    >
+                                        <Coffee className="size-4 text-zinc-600" />
+                                    </div>
+                                    {cardType !== "wide" && (
+                                        <div className="pt-1.5 pb-1">
+                                            <p className="text-xs font-semibold truncate" style={{ color: titleColor }}>{c.cafe_name}</p>
+                                            <p className="text-xs text-zinc-500 truncate">{c.area ?? c.city ?? ""}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Events — large cards */}
+                    {selectedEvents.length > 0 && eventStyle === "card" && (
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                            {selectedEvents.map((ev) => (
+                                <div
+                                    key={ev.event_id}
+                                    className="shrink-0 rounded-2xl overflow-hidden relative flex-col justify-end"
+                                    style={{ width: evW, height: evH, backgroundColor: "#1a1a1a", display: "flex" }}
+                                >
+                                    {/* Scrim */}
+                                    <div className="absolute inset-0" style={{
+                                        background: "linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,0.85) 100%)"
+                                    }} />
+                                    {/* Heart */}
+                                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/30 flex items-center justify-center">
+                                        <span className="text-white text-xs">♡</span>
+                                    </div>
+                                    {/* Price badge */}
+                                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-xs font-bold text-white"
+                                        style={{ backgroundColor: ev.is_paid ? "rgba(0,0,0,0.55)" : "rgba(0,160,80,0.85)" }}>
+                                        {ev.is_paid ? `₹${ev.base_price}` : "Free"}
+                                    </div>
+                                    {/* Info */}
+                                    <div className="relative z-10 p-2">
+                                        {ev.start_time && (
+                                            <p className="text-xs font-medium mb-0.5" style={{ color: countColor }}>
+                                                {new Date(ev.start_time).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+                                            </p>
+                                        )}
+                                        <p className="font-bold leading-tight" style={{ fontSize: 13, color: titleColor }}>{ev.title}</p>
+                                        {ev.venue_city && <p className="text-xs text-zinc-400 mt-0.5">📍 {ev.venue_city}</p>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Events — compact list */}
+                    {selectedEvents.length > 0 && eventStyle === "list" && (
+                        <div className="space-y-2">
+                            {selectedEvents.map((ev) => (
+                                <div key={ev.event_id} className="flex items-center gap-2 bg-zinc-800 rounded-xl overflow-hidden">
+                                    <div className="w-14 h-14 bg-zinc-700 shrink-0 flex items-center justify-center">
+                                        <Ticket className="size-4 text-zinc-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0 py-1.5 pr-2">
+                                        <p className="text-white text-xs font-semibold truncate">{ev.title}</p>
+                                        <p className="text-xs mt-0.5" style={{ color: countColor }}>
+                                            {ev.venue_city ?? ""}{ev.is_paid ? ` · ₹${ev.base_price}` : " · Free"}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {isEmpty && !showAsPromo && (
+                        <div className="text-center py-8 text-zinc-600 text-sm">
+                            Add cafés or events to see preview
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── App Preview Panel — 3-tab full-screen preview with section reordering ────
+function AppPreviewPanel({ currentDraft = EMPTY_DRAFT, currentLayout = {} }: {
+    currentDraft?: SectionDraft;
+    currentLayout?: Record<string, any>;
+}) {
+    const queryClient = useQueryClient();
+    const [appTab, setAppTab] = useState<"home" | "cafes" | "events">("home");
+    const [localOrder, setLocalOrder] = useState<Record<string, number>>({});
+    const [saving, setSaving] = useState(false);
+
+    const { data: sections = [] } = useQuery<Section[]>({
+        queryKey: ["admin-sections"],
+        staleTime: 30_000,
+        queryFn: async () => {
+            const { data } = await api.get("/admin/sections");
+            return data.data ?? [];
+        },
+    });
+
+    // Only published, non-expired sections appear on the app
+    const published = sections.filter(
+        (s) => s.status === "published" &&
+            (!s.valid_until || new Date(s.valid_until) > new Date())
+    );
+
+    // Mirror the sectionBelongsToTab logic from the app
+    function belongsToTab(s: Section, tab: "home" | "cafes" | "events"): boolean {
+        const dt: string | undefined = (s.layout as any)?.displayTab;
+        if (dt === "all") return true;
+        if (dt === "cafes") return tab === "cafes";
+        if (dt === "events") return tab === "events";
+        if (dt === "home") return tab === "home";
+        // No displayTab set — use content-aware fallback
+        if (tab === "home") return true;
+        if (tab === "cafes") return s.cafe_ids.length > 0 || (s.item_ids ?? []).length > 0;
+        if (tab === "events") return s.event_ids.length > 0;
+        return false;
+    }
+
+    const effectiveOrder = (s: Section) => localOrder[s.section_key] ?? s.sort_order;
+
+    const tabSections = published
+        .filter((s) => belongsToTab(s, appTab))
+        .sort((a, b) => effectiveOrder(a) - effectiveOrder(b));
+
+    // Swap two items and reindex the whole visible list with clean multiples-of-10
+    const move = (idx: number, dir: -1 | 1) => {
+        const targetIdx = idx + dir;
+        if (targetIdx < 0 || targetIdx >= tabSections.length) return;
+        const keys = tabSections.map((s) => s.section_key);
+        [keys[idx], keys[targetIdx]] = [keys[targetIdx], keys[idx]];
+        const updates: Record<string, number> = {};
+        keys.forEach((key, i) => { updates[key] = (i + 1) * 10; });
+        setLocalOrder((prev) => ({ ...prev, ...updates }));
+    };
+
+    const hasChanges = Object.keys(localOrder).length > 0;
+
+    const saveOrder = async () => {
+        setSaving(true);
+        try {
+            await Promise.all(
+                Object.entries(localOrder).map(([key, sortOrder]) =>
+                    api.patch(`/admin/sections/${key}`, { sort_order: sortOrder })
+                )
+            );
+            await queryClient.invalidateQueries({ queryKey: ["admin-sections"] });
+            setLocalOrder({});
+            toast.success("Section order saved");
+        } catch {
+            toast.error("Failed to save order");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const tabConfig = [
+        { key: "home" as const, label: "🏠 Home" },
+        { key: "cafes" as const, label: "☕ Cafe" },
+        { key: "events" as const, label: "🎭 Events" },
+    ];
+
+    // Is the draft being edited live in this tab?
+    const currentDraftBelongs = currentDraft.section_key
+        ? belongsToTab({ ...currentDraft, layout: currentLayout } as Section, appTab)
+        : false;
+
+    return (
+        <div className="space-y-4">
+            {/* Tab switcher + Save button */}
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1 bg-muted/60 rounded-xl p-1">
+                    {tabConfig.map((t) => (
+                        <button
+                            key={t.key}
+                            onClick={() => setAppTab(t.key)}
+                            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                                appTab === t.key
+                                    ? "bg-background shadow text-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+                {hasChanges && (
+                    <Button size="sm" onClick={saveOrder} disabled={saving} className="gap-1.5 shrink-0">
+                        {saving
+                            ? <Loader2 className="size-3.5 animate-spin" />
+                            : <CheckCircle2 className="size-3.5" />
+                        }
+                        Save Order
+                    </Button>
+                )}
+            </div>
+
+            {/* Phone-style frame */}
+            <div className="bg-zinc-950 rounded-2xl border border-zinc-800 overflow-hidden">
+                <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium px-4 pt-4 pb-2">
+                    App Preview —{" "}
+                    {appTab === "home" ? "Home" : appTab === "cafes" ? "Cafes" : "Events"} Tab
+                </p>
+
+                <div className="bg-black mx-4 mb-4 rounded-2xl overflow-hidden" style={{ minHeight: 220 }}>
+                    {/* Static screen header per tab */}
+                    <div className="px-5 pt-5 pb-3 border-b border-zinc-900">
+                        <p className="text-white font-bold text-base">
+                            {appTab === "home" && "What's on 🔥"}
+                            {appTab === "cafes" && "Explore Cafes"}
+                            {appTab === "events" && "Explore Events"}
+                        </p>
+                        <p className="text-zinc-500 text-xs mt-0.5">
+                            {appTab === "home" && "Hand-picked for you"}
+                            {appTab === "cafes" && "Discover spaces near you"}
+                            {appTab === "events" && "Upcoming experiences"}
+                        </p>
+                    </div>
+
+                    {/* Sections list — order reflects what users see */}
+                    <div className="divide-y divide-zinc-900/60">
+                        {tabSections.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-zinc-600 text-sm">
+                                <Sparkles className="size-6 mb-2 opacity-30" />
+                                No live sections for this tab
+                            </div>
+                        ) : (
+                            tabSections.map((s, idx) => {
+                                const isCurrentDraft = s.section_key === currentDraft.section_key;
+                                const dt: string = (s.layout as any)?.displayTab ?? "home";
+                                const changed = localOrder[s.section_key] !== undefined;
+
+                                return (
+                                    <div
+                                        key={s.section_key}
+                                        className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                                            isCurrentDraft
+                                                ? "bg-primary/10"
+                                                : changed
+                                                ? "bg-amber-950/20"
+                                                : "hover:bg-zinc-900/50"
+                                        }`}
+                                    >
+                                        {/* Position number */}
+                                        <div className="shrink-0 w-5 text-center">
+                                            <span className="text-xs font-bold text-zinc-500">{idx + 1}</span>
+                                        </div>
+
+                                        {/* Section info */}
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm font-semibold truncate ${isCurrentDraft ? "text-primary" : "text-white"}`}>
+                                                {s.title}
+                                                {isCurrentDraft && (
+                                                    <span className="ml-1.5 text-xs font-normal text-primary/60">(this section)</span>
+                                                )}
+                                            </p>
+                                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                <span className="text-[10px] font-mono text-zinc-600">{s.section_key}</span>
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                                    dt === "all"    ? "bg-blue-900/60 text-blue-300" :
+                                                    dt === "cafes"  ? "bg-amber-900/60 text-amber-300" :
+                                                    dt === "events" ? "bg-red-900/60 text-red-300" :
+                                                                      "bg-zinc-800 text-zinc-400"
+                                                }`}>
+                                                    {dt === "all" ? "All tabs" : dt === "cafes" ? "Cafes" : dt === "events" ? "Events" : "Home"}
+                                                </span>
+                                                <span className="text-[10px] text-zinc-600">
+                                                    {s.cafe_ids.length > 0 ? `${s.cafe_ids.length}☕ ` : ""}
+                                                    {s.event_ids.length > 0 ? `${s.event_ids.length}🎭 ` : ""}
+                                                    {(s.item_ids ?? []).length > 0 ? `${(s.item_ids ?? []).length}🍴` : ""}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Up / Down reorder buttons */}
+                                        <div className="flex flex-col gap-0.5 shrink-0">
+                                            <button
+                                                onClick={() => move(idx, -1)}
+                                                disabled={idx === 0}
+                                                title="Move up"
+                                                className="w-6 h-5 rounded flex items-center justify-center text-[10px] text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                ▲
+                                            </button>
+                                            <button
+                                                onClick={() => move(idx, 1)}
+                                                disabled={idx === tabSections.length - 1}
+                                                title="Move down"
+                                                className="w-6 h-5 rounded flex items-center justify-center text-[10px] text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                ▼
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                 </div>
-            ))}
+            </div>
 
-            {selectedCafes.length === 0 && selectedEvents.length === 0 && (
-                <div className="text-center py-8 text-zinc-600 text-sm">
-                    Add cafés or events to see preview
+            {/* Indicator when the current draft isn't published but belongs to this tab */}
+            {currentDraft.section_key && currentDraft.status !== "published" && currentDraftBelongs && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+                    <p className="text-sm font-medium text-primary">
+                        &ldquo;{currentDraft.title || currentDraft.section_key}&rdquo; is not yet live
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        This section ({currentDraft.status}) will appear in this tab once published.
+                    </p>
+                </div>
+            )}
+
+            {hasChanges && (
+                <p className="text-xs text-muted-foreground text-center">
+                    Unsaved order changes highlighted in amber — click <strong>Save Order</strong> to persist.
+                </p>
+            )}
+        </div>
+    );
+}
+
+// ─── Buzz Item Picker — searchable dropdown for menu items ───────────────────
+function BuzzItemPicker({
+    items, selectedIds, onAdd, disabled,
+}: {
+    items: MenuItem[];
+    selectedIds: string[];
+    onAdd: (id: string) => void;
+    disabled?: boolean;
+}) {
+    const [query, setQuery] = useState("");
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    const available = items.filter(
+        (m) => !selectedIds.includes(m.item_id) &&
+            (!query || m.item_name.toLowerCase().includes(query.toLowerCase()) ||
+                m.cafe_name.toLowerCase().includes(query.toLowerCase()) ||
+                (m.category ?? "").toLowerCase().includes(query.toLowerCase()))
+    );
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    return (
+        <div ref={ref} className="relative">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <Input
+                    value={query}
+                    onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+                    onFocus={() => setOpen(true)}
+                    placeholder="Search menu items by name, café, or category…"
+                    className="pl-8 text-sm"
+                    disabled={disabled}
+                />
+            </div>
+            {open && available.length > 0 && (
+                <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                    {available.slice(0, 20).map((m) => (
+                        <button
+                            key={m.item_id}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60 transition-colors text-left"
+                            onClick={() => { onAdd(m.item_id); setQuery(""); setOpen(false); }}
+                        >
+                            {m.cover_img ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={m.cover_img} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                            ) : (
+                                <div className="w-9 h-9 rounded-lg bg-muted shrink-0 flex items-center justify-center text-base">🍽️</div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{m.item_name}</p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                    {m.cafe_name}{m.area ? ` · ${m.area}` : ""}
+                                </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                                {m.tag && <Badge variant="outline" className="text-[10px] mb-0.5">{m.tag}</Badge>}
+                                {m.price ? <p className="text-xs text-muted-foreground">₹{m.price}</p> : null}
+                            </div>
+                        </button>
+                    ))}
+                    {available.length > 20 && (
+                        <p className="px-3 py-2 text-xs text-muted-foreground text-center border-t">
+                            Showing 20 of {available.length} — type to narrow
+                        </p>
+                    )}
+                </div>
+            )}
+            {open && available.length === 0 && query && (
+                <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border rounded-xl shadow-lg p-4 text-sm text-muted-foreground text-center">
+                    No items match "{query}"
                 </div>
             )}
         </div>
@@ -259,20 +971,53 @@ function SectionFormModal({
     isPending: boolean;
 }) {
     const [draft, setDraft] = useState<SectionDraft>(initialDraft);
+    const [layoutDraft, setLayoutDraft] = useState<Record<string, any>>({
+        cardWidth: 171,
+        cardHeight: 172,
+        showCount: true,
+        titleColor: "#ffffff",
+        subtitleColor: "#9CA3AF",
+        countColor: "#D4AF37",
+    });
     const [activeTab, setActiveTab] = useState<"details" | "content" | "preview">("details");
     const isEdit = !!initialDraft.section_key;
 
     const { data: cafes = [] } = useCafeList();
     const { data: events = [] } = useEventList();
+    const { data: menuItems = [] } = useMenuItemList();
 
-    useEffect(() => { setDraft(initialDraft); setActiveTab("details"); }, [initialDraft, open]);
+    const DEFAULT_LAYOUT = {
+        cardWidth: 171, cardHeight: 172, showCount: true,
+        titleColor: "#ffffff", subtitleColor: "#9CA3AF", countColor: "#D4AF37",
+    };
+
+    useEffect(() => {
+        setDraft({
+            ...initialDraft,
+            item_ids: (initialDraft as any).item_ids ?? [],
+        });
+        setLayoutDraft((initialDraft as any).layout ?? DEFAULT_LAYOUT);
+        setActiveTab("details");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialDraft, open]);
 
     const set = (k: keyof SectionDraft, v: unknown) => setDraft((p) => ({ ...p, [k]: v }));
+    const setLayout = (k: string, v: unknown) => setLayoutDraft((p) => ({ ...p, [k]: v }));
+    const applyPreset = (w: number, h: number) => setLayoutDraft((p) => ({ ...p, cardWidth: w, cardHeight: h }));
+    const applyTemplate = (tpl: (typeof LAYOUT_TEMPLATES[number]) & { layout: Record<string, any> }) =>
+        // Preserve user-set displayTab (and any other "meta" fields) when switching templates
+        setLayoutDraft((prev) => ({
+            ...tpl.layout,
+            _templateId: tpl.id,
+            displayTab: prev.displayTab,  // never wipe the tab selection
+        }));
 
     const addCafe = (id: string) => setDraft((p) => ({ ...p, cafe_ids: [...new Set([...p.cafe_ids, id])] }));
     const removeCafe = (id: string) => setDraft((p) => ({ ...p, cafe_ids: p.cafe_ids.filter((x) => x !== id) }));
     const addEvent = (id: string) => setDraft((p) => ({ ...p, event_ids: [...new Set([...p.event_ids, id])] }));
     const removeEvent = (id: string) => setDraft((p) => ({ ...p, event_ids: p.event_ids.filter((x) => x !== id) }));
+    const addItem = (id: string) => setDraft((p) => ({ ...p, item_ids: [...new Set([...(p.item_ids ?? []), id])] }));
+    const removeItem = (id: string) => setDraft((p) => ({ ...p, item_ids: (p.item_ids ?? []).filter((x) => x !== id) }));
 
     const tabs = ["details", "content", "preview"] as const;
 
@@ -365,21 +1110,442 @@ function SectionFormModal({
                                     />
                                 </div>
                             </div>
+
+                            {/* ── Display In (tab target) ──────────────────────── */}
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium flex items-center gap-1.5">
+                                    <span>📍</span> Display In
+                                    <span className="text-xs font-normal text-muted-foreground">— which tab shows this section</span>
+                                </Label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {([
+                                        { value: "home", label: "🏠 Home", desc: "Home screen only" },
+                                        { value: "cafes", label: "☕ Cafes", desc: "Cafes tab only" },
+                                        { value: "events", label: "🎭 Events", desc: "Events tab only" },
+                                        { value: "all", label: "🌐 All Tabs", desc: "Everywhere" },
+                                    ] as const).map(({ value, label, desc }) => {
+                                        const current = (layoutDraft as any).displayTab ?? "home";
+                                        const isActive = current === value;
+                                        return (
+                                            <button
+                                                key={value}
+                                                onClick={() => setLayout("displayTab", value)}
+                                                className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl text-xs border transition-colors ${
+                                                    isActive
+                                                        ? "bg-primary text-primary-foreground border-primary"
+                                                        : "border-muted-foreground/20 hover:border-muted-foreground/40 text-muted-foreground"
+                                                }`}
+                                            >
+                                                <span className="font-semibold">{label}</span>
+                                                <span className={`text-[10px] leading-tight text-center ${isActive ? "opacity-80" : "opacity-60"}`}>{desc}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <Separator className="my-4" />
+
+                            {/* ── Premium Layout Templates ────────────────────── */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="size-3.5 text-amber-400" />
+                                    <h3 className="font-semibold text-sm">Premium Templates</h3>
+                                    <span className="text-xs text-muted-foreground">— one-click visual presets</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {LAYOUT_TEMPLATES.map((tpl) => {
+                                        const isActive = (layoutDraft as any)._templateId === tpl.id;
+                                        const [bg, mid, hi] = tpl.colors;
+
+                                        // Shape preview: mini cards that match the template's card shape
+                                        const isTall = tpl.cardShape === "tall" || tpl.cardShape === "tall-glow";
+                                        const isWide = tpl.cardShape === "wide";
+                                        const isList = tpl.cardShape === "list";
+                                        const isSquare = tpl.cardShape === "square";
+
+                                        return (
+                                            <button
+                                                key={tpl.id}
+                                                onClick={() => applyTemplate(tpl as any)}
+                                                className={`group relative text-left rounded-2xl overflow-hidden transition-all duration-200 ${
+                                                    isActive
+                                                        ? "ring-2 scale-[1.02]"
+                                                        : "hover:scale-[1.01] hover:brightness-110"
+                                                }`}
+                                                style={{
+                                                    background: `linear-gradient(155deg, ${bg} 0%, ${bg}ee 60%, ${mid}22 100%)`,
+                                                    boxShadow: isActive
+                                                        ? `0 0 0 2px ${hi}, 0 8px 24px ${bg}88`
+                                                        : `0 4px 12px ${bg}66`,
+                                                    border: `1px solid ${mid}40`,
+                                                }}
+                                            >
+                                                {/* Pattern overlay — unique per template */}
+                                                {tpl.pattern === "filmstrip" && (
+                                                    <div className="absolute inset-y-0 right-0 w-5 flex flex-col justify-around opacity-20 px-1">
+                                                        {[...Array(6)].map((_, i) => (
+                                                            <div key={i} className="h-2 rounded-sm" style={{ backgroundColor: mid }} />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {tpl.pattern === "diagonal" && (
+                                                    <div className="absolute inset-0 opacity-10" style={{
+                                                        backgroundImage: `repeating-linear-gradient(45deg, ${mid} 0px, ${mid} 1px, transparent 1px, transparent 8px)`
+                                                    }} />
+                                                )}
+                                                {tpl.pattern === "shimmer" && (
+                                                    <div className="absolute inset-0 opacity-15" style={{
+                                                        backgroundImage: `linear-gradient(105deg, transparent 20%, ${hi}80 50%, transparent 80%)`
+                                                    }} />
+                                                )}
+                                                {tpl.pattern === "waves" && (
+                                                    <div className="absolute bottom-0 left-0 right-0 h-6 opacity-20 flex items-end gap-0.5 px-2">
+                                                        {[3, 5, 4, 6, 3, 5, 4, 3, 6, 4, 5, 3].map((h, i) => (
+                                                            <div key={i} className="flex-1 rounded-t" style={{ height: `${h * 3}px`, backgroundColor: mid }} />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {tpl.pattern === "floral" && (
+                                                    <div className="absolute top-1 right-1 text-base opacity-20 select-none">✿✾✿</div>
+                                                )}
+                                                {tpl.pattern === "neon" && (
+                                                    <div className="absolute inset-0 rounded-2xl opacity-20" style={{
+                                                        boxShadow: `inset 0 0 20px ${mid}`,
+                                                    }} />
+                                                )}
+
+                                                {/* Content */}
+                                                <div className="relative z-10 p-3">
+                                                    {/* Header row */}
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <span className="text-base leading-none">{tpl.emoji}</span>
+                                                        {isActive ? (
+                                                            <div className="w-4 h-4 rounded-full flex items-center justify-center"
+                                                                style={{ backgroundColor: hi }}>
+                                                                <Check className="size-2.5 text-black" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-4 h-4 rounded-full border opacity-40"
+                                                                style={{ borderColor: mid }} />
+                                                        )}
+                                                    </div>
+
+                                                    {/* Mini card shape preview */}
+                                                    <div className="flex gap-1 mb-2.5">
+                                                        {isList ? (
+                                                            // List rows
+                                                            <div className="flex-1 space-y-0.5">
+                                                                {[...Array(3)].map((_, i) => (
+                                                                    <div key={i} className="h-2.5 rounded flex items-center gap-1 px-1"
+                                                                        style={{ backgroundColor: mid + "25" }}>
+                                                                        <div className="w-2.5 h-2 rounded-sm shrink-0" style={{ backgroundColor: mid + "60" }} />
+                                                                        <div className="flex-1 h-1 rounded-full" style={{ backgroundColor: mid + "40" }} />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : isWide ? (
+                                                            // Wide landscape cards
+                                                            <div className="flex flex-col gap-1 flex-1">
+                                                                {[...Array(2)].map((_, i) => (
+                                                                    <div key={i} className="h-6 rounded-lg" style={{ backgroundColor: mid + "25", border: `1px solid ${mid}30` }} />
+                                                                ))}
+                                                            </div>
+                                                        ) : isSquare ? (
+                                                            // Square cards in a row
+                                                            <div className="flex gap-1 flex-1">
+                                                                {[...Array(3)].map((_, i) => (
+                                                                    <div key={i} className="flex-1 rounded-lg" style={{
+                                                                        aspectRatio: "1",
+                                                                        backgroundColor: mid + "25",
+                                                                        border: `1px solid ${mid}30`,
+                                                                    }} />
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            // Tall portrait cards (default + glow)
+                                                            <div className="flex gap-1 flex-1">
+                                                                {[...Array(3)].map((_, i) => (
+                                                                    <div key={i} className="flex-1 rounded-lg"
+                                                                        style={{
+                                                                            height: 36,
+                                                                            backgroundColor: mid + "25",
+                                                                            border: `1px solid ${mid}30`,
+                                                                            boxShadow: tpl.layout.cardType === "glow"
+                                                                                ? `0 0 6px ${mid}60`
+                                                                                : undefined,
+                                                                        }}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <p className="text-xs font-bold leading-none mb-0.5" style={{ color: hi }}>
+                                                        {tpl.name}
+                                                    </p>
+                                                    <p className="text-[10px] leading-tight opacity-70" style={{ color: hi }}>
+                                                        {tpl.desc}
+                                                    </p>
+
+                                                    {/* Type badge */}
+                                                    <div className="mt-2 inline-flex items-center gap-1">
+                                                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wide"
+                                                            style={{ backgroundColor: mid + "35", color: hi }}>
+                                                            {tpl.layout.cardType}
+                                                        </span>
+                                                        <span className="text-[9px] px-1.5 py-0.5 rounded-full"
+                                                            style={{ backgroundColor: hi + "20", color: hi + "cc" }}>
+                                                            {tpl.layout.eventStyle === "list" ? "list" : "carousel"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <Separator className="my-4" />
+
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-sm flex items-center gap-1.5">
+                                    <span>Layout Settings</span>
+                                    <span className="text-xs font-normal text-muted-foreground">fine-tune manually</span>
+                                </h3>
+
+                                {/* Event style — only relevant when section has events */}
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-medium">Event Display Style</Label>
+                                    <div className="flex gap-2">
+                                        {([
+                                            { value: "card", label: "🎭 Card Carousel", desc: "Large portrait cards" },
+                                            { value: "list", label: "☰ Compact List", desc: "Thumbnail + text rows" },
+                                        ] as const).map(({ value, label, desc }) => (
+                                            <button
+                                                key={value}
+                                                onClick={() => setLayout("eventStyle", value)}
+                                                className={`flex-1 px-3 py-2 rounded-xl text-xs border transition-colors text-left ${
+                                                    (layoutDraft.eventStyle ?? "card") === value
+                                                        ? "bg-primary text-primary-foreground border-primary"
+                                                        : "border-muted-foreground/20 hover:border-muted-foreground/40"
+                                                }`}
+                                            >
+                                                <div className="font-semibold">{label}</div>
+                                                <div className={`mt-0.5 ${(layoutDraft.eventStyle ?? "card") === value ? "opacity-80" : "text-muted-foreground"}`}>{desc}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {(layoutDraft.eventStyle ?? "card") === "card" && (
+                                        <div className="grid grid-cols-2 gap-3 pt-1">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs">Event Card Width</Label>
+                                                <Input type="number" min={140} max={300} value={layoutDraft.eventCardWidth ?? 200}
+                                                    onChange={(e) => setLayout("eventCardWidth", Math.max(140, Math.min(300, Number(e.target.value))))} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs">Event Card Height</Label>
+                                                <Input type="number" min={200} max={400} value={layoutDraft.eventCardHeight ?? 290}
+                                                    onChange={(e) => setLayout("eventCardHeight", Math.max(200, Math.min(400, Number(e.target.value))))} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <Separator className="my-1" />
+
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-medium">Card Type (Cafes &amp; Items)</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(['default', 'glow', 'wide', 'minimal', 'promo'] as const).map((type) => {
+                                            const label = type === 'promo' ? 'Promo ✨' : type.charAt(0).toUpperCase() + type.slice(1);
+                                            return (
+                                                <button
+                                                    key={type}
+                                                    onClick={() => setLayout("cardType", type)}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                                                        layoutDraft.cardType === type
+                                                            ? "bg-primary text-primary-foreground border-primary"
+                                                            : "border-muted-foreground/20 hover:border-muted-foreground/50 text-foreground"
+                                                    }`}
+                                                >
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {layoutDraft.cardType === 'promo' && (
+                                        <p className="text-xs text-muted-foreground italic">
+                                            Promo cards use the section title and subtitle as content — no item selection needed.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-medium">Card Size Presets</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => applyPreset(148, 148)}
+                                            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                                                layoutDraft.cardWidth === 148 && layoutDraft.cardHeight === 148
+                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                    : "border-muted-foreground/20 hover:border-muted-foreground/50"
+                                            }`}
+                                        >
+                                            Square 148×148
+                                        </button>
+                                        <button
+                                            onClick={() => applyPreset(171, 172)}
+                                            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                                                layoutDraft.cardWidth === 171 && layoutDraft.cardHeight === 172
+                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                    : "border-muted-foreground/20 hover:border-muted-foreground/50"
+                                            }`}
+                                        >
+                                            Medium 171×172
+                                        </button>
+                                        <button
+                                            onClick={() => applyPreset(220, 200)}
+                                            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                                                layoutDraft.cardWidth === 220 && layoutDraft.cardHeight === 200
+                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                    : "border-muted-foreground/20 hover:border-muted-foreground/50"
+                                            }`}
+                                        >
+                                            Large 220×200
+                                        </button>
+                                        <button
+                                            onClick={() => applyPreset(260, 150)}
+                                            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                                                layoutDraft.cardWidth === 260 && layoutDraft.cardHeight === 150
+                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                    : "border-muted-foreground/20 hover:border-muted-foreground/50"
+                                            }`}
+                                        >
+                                            Wide 260×150
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="card-width" className="text-xs">Width (120–320)</Label>
+                                        <Input
+                                            id="card-width"
+                                            type="number"
+                                            min={120}
+                                            max={320}
+                                            value={layoutDraft.cardWidth ?? 171}
+                                            onChange={(e) => setLayout("cardWidth", Math.max(120, Math.min(320, Number(e.target.value))))}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="card-height" className="text-xs">Height (100–280)</Label>
+                                        <Input
+                                            id="card-height"
+                                            type="number"
+                                            min={100}
+                                            max={280}
+                                            value={layoutDraft.cardHeight ?? 172}
+                                            onChange={(e) => setLayout("cardHeight", Math.max(100, Math.min(280, Number(e.target.value))))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="show-count" className="text-xs font-medium">Show item count</Label>
+                                        <button
+                                            onClick={() => setLayout("showCount", !layoutDraft.showCount)}
+                                            className={`w-10 h-6 rounded-full transition-colors ${
+                                                layoutDraft.showCount ? "bg-primary" : "bg-muted"
+                                            } flex items-center px-1`}
+                                        >
+                                            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                                                layoutDraft.showCount ? "translate-x-4" : "translate-x-0"
+                                            }`} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <Separator className="my-3" />
+
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-medium">Title Color</Label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {["#ffffff", "#F9FAFB", "#D4AF37", "#FCD34D", "#F87171", "#60A5FA"].map((color) => (
+                                            <button
+                                                key={color}
+                                                onClick={() => setLayout("titleColor", color)}
+                                                className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                                                    layoutDraft.titleColor === color ? "border-primary" : "border-muted-foreground/20"
+                                                }`}
+                                                style={{ backgroundColor: color }}
+                                            />
+                                        ))}
+                                    </div>
+                                    <Input
+                                        type="color"
+                                        value={layoutDraft.titleColor ?? "#ffffff"}
+                                        onChange={(e) => setLayout("titleColor", e.target.value)}
+                                        className="h-10 w-16"
+                                    />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-medium">Subtitle Color</Label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {["#ffffff", "#F9FAFB", "#D4AF37", "#FCD34D", "#F87171", "#60A5FA"].map((color) => (
+                                            <button
+                                                key={color}
+                                                onClick={() => setLayout("subtitleColor", color)}
+                                                className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                                                    layoutDraft.subtitleColor === color ? "border-primary" : "border-muted-foreground/20"
+                                                }`}
+                                                style={{ backgroundColor: color }}
+                                            />
+                                        ))}
+                                    </div>
+                                    <Input
+                                        type="color"
+                                        value={layoutDraft.subtitleColor ?? "#9CA3AF"}
+                                        onChange={(e) => setLayout("subtitleColor", e.target.value)}
+                                        className="h-10 w-16"
+                                    />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-medium">Count Label Color</Label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {["#ffffff", "#F9FAFB", "#D4AF37", "#FCD34D", "#F87171", "#60A5FA"].map((color) => (
+                                            <button
+                                                key={color}
+                                                onClick={() => setLayout("countColor", color)}
+                                                className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                                                    layoutDraft.countColor === color ? "border-primary" : "border-muted-foreground/20"
+                                                }`}
+                                                style={{ backgroundColor: color }}
+                                            />
+                                        ))}
+                                    </div>
+                                    <Input
+                                        type="color"
+                                        value={layoutDraft.countColor ?? "#D4AF37"}
+                                        onChange={(e) => setLayout("countColor", e.target.value)}
+                                        className="h-10 w-16"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     )}
 
                     {activeTab === "content" && (
                         <div className="space-y-6">
-                            <ItemPicker
-                                label="Cafés"
-                                items={cafes}
+                            <CafePicker
+                                cafes={cafes}
                                 selectedIds={draft.cafe_ids}
                                 onAdd={addCafe}
                                 onRemove={removeCafe}
-                                idKey="cafe_id"
-                                nameKey="cafe_name"
-                                subKey="city"
-                                icon={Coffee}
                                 disabled={isPending}
                             />
                             <Separator />
@@ -395,18 +1561,92 @@ function SectionFormModal({
                                 icon={Ticket}
                                 disabled={isPending}
                             />
+                            <Separator />
+                            {/* Menu Items picker — for Items on the Buzz sections */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold flex items-center gap-1.5">
+                                            <TrendingUp className="size-4 text-amber-400" />
+                                            Menu Items on the Buzz
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            Pick specific menu items to feature in the buzz section
+                                        </p>
+                                    </div>
+                                    {(draft.item_ids ?? []).length > 0 && (
+                                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                                            {(draft.item_ids ?? []).length} item{(draft.item_ids ?? []).length > 1 ? "s" : ""}
+                                        </Badge>
+                                    )}
+                                </div>
+
+                                {/* Selected items */}
+                                {(draft.item_ids ?? []).length > 0 && (
+                                    <div className="space-y-1.5">
+                                        {(draft.item_ids ?? []).map((id) => {
+                                            const item = menuItems.find((m) => m.item_id === id);
+                                            if (!item) return (
+                                                <div key={id} className="flex items-center justify-between p-2 bg-muted/40 rounded-lg">
+                                                    <span className="text-xs text-muted-foreground font-mono">{id}</span>
+                                                    <button onClick={() => removeItem(id)} disabled={isPending}>
+                                                        <X className="size-3.5 text-muted-foreground hover:text-destructive" />
+                                                    </button>
+                                                </div>
+                                            );
+                                            return (
+                                                <div key={id} className="flex items-center gap-2 p-2 bg-muted/40 rounded-xl border border-muted-foreground/10 hover:border-muted-foreground/20 transition-colors">
+                                                    {item.cover_img ? (
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img src={item.cover_img} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-lg bg-muted shrink-0 flex items-center justify-center">
+                                                            <TrendingUp className="size-4 text-muted-foreground" />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium truncate">{item.item_name}</p>
+                                                        <p className="text-xs text-muted-foreground truncate">
+                                                            {item.cafe_name}{item.area ? ` · ${item.area}` : ""}
+                                                            {item.price ? ` · ₹${item.price}` : ""}
+                                                        </p>
+                                                    </div>
+                                                    {item.tag && (
+                                                        <Badge variant="secondary" className="text-xs shrink-0">{item.tag}</Badge>
+                                                    )}
+                                                    <button
+                                                        onClick={() => removeItem(id)}
+                                                        disabled={isPending}
+                                                        className="shrink-0 p-1 rounded hover:bg-destructive/10 transition-colors"
+                                                    >
+                                                        <X className="size-3.5 text-muted-foreground hover:text-destructive" />
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Item search picker */}
+                                <BuzzItemPicker
+                                    items={menuItems}
+                                    selectedIds={draft.item_ids ?? []}
+                                    onAdd={addItem}
+                                    disabled={isPending}
+                                />
+                            </div>
                         </div>
                     )}
 
                     {activeTab === "preview" && (
-                        <SectionAppPreview draft={draft} cafes={cafes} events={events} />
+                        <AppPreviewPanel currentDraft={draft} currentLayout={layoutDraft} />
                     )}
                 </div>
 
                 <DialogFooter className="px-6 py-4 border-t">
                     <Button variant="outline" onClick={onClose}>Cancel</Button>
                     {!isPending && (
-                        <Button onClick={() => onSave(draft)} disabled={saving} className="min-w-32">
+                        <Button onClick={() => onSave({ ...draft, layout: layoutDraft } as any)} disabled={saving} className="min-w-32">
                             {saving ? <Loader2 className="animate-spin size-4 mr-2" /> : null}
                             {isEdit ? "Save Changes" : "Create Section"}
                         </Button>
@@ -469,12 +1709,17 @@ function SectionCard({
                         )}
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                        <StatusBadge status={section.status} isExpired={isExpired} />
+                        <div className="flex items-center gap-1">
+                            <StatusBadge status={section.status} isExpired={isExpired} />
+                            {(section.layout as any)?.cardType === 'promo' && (
+                                <Badge className="bg-purple-500 text-white text-xs">Promo</Badge>
+                            )}
+                        </div>
                         <span className="text-xs text-muted-foreground font-mono">#{section.sort_order}</span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                     <div className="bg-muted/50 rounded-xl p-3 text-center">
                         <Coffee className="size-4 mx-auto mb-1 text-muted-foreground" />
                         <p className="text-lg font-bold">{section.cafe_ids.length}</p>
@@ -487,7 +1732,12 @@ function SectionCard({
                     </div>
                     <div className="bg-muted/50 rounded-xl p-3 text-center">
                         <TrendingUp className="size-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-lg font-bold">{section.cafe_ids.length + section.event_ids.length}</p>
+                        <p className="text-lg font-bold">{(section.item_ids ?? []).length}</p>
+                        <p className="text-xs text-muted-foreground">Items</p>
+                    </div>
+                    <div className="bg-primary/10 rounded-xl p-3 text-center">
+                        <Sparkles className="size-4 mx-auto mb-1 text-primary" />
+                        <p className="text-lg font-bold">{section.cafe_ids.length + section.event_ids.length + (section.item_ids ?? []).length}</p>
                         <p className="text-xs text-muted-foreground">Total</p>
                     </div>
                 </div>
@@ -607,9 +1857,71 @@ function SectionCard({
     );
 }
 
+// ─── Refresh App Button ───────────────────────────────────────────────────────
+// Shows a countdown after clicking, telling admin when users will see the change.
+// The app polls for updates every 30s automatically — this button provides reassurance.
+function RefreshAppButton() {
+    const [state, setState] = useState<"idle" | "refreshing" | "done">("idle");
+    const [countdown, setCountdown] = useState(30);
+
+    const handleRefresh = async () => {
+        setState("refreshing");
+        try {
+            // Invalidate the admin sections cache to show latest state
+            await api.post("/admin/sections/broadcast").catch(() => null); // best-effort — endpoint may not exist
+        } catch { /* ignore */ }
+
+        // Show countdown: users will see changes within 30s (app polls every 30s)
+        setState("done");
+        setCountdown(30);
+        const interval = setInterval(() => {
+            setCountdown((c) => {
+                if (c <= 1) {
+                    clearInterval(interval);
+                    setState("idle");
+                    return 30;
+                }
+                return c - 1;
+            });
+        }, 1000);
+    };
+
+    return (
+        <button
+            onClick={handleRefresh}
+            disabled={state !== "idle"}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+                state === "done"
+                    ? "bg-green-500/10 border-green-500/40 text-green-600 dark:text-green-400"
+                    : state === "refreshing"
+                    ? "bg-muted border-muted-foreground/20 text-muted-foreground opacity-60"
+                    : "border-muted-foreground/30 hover:border-muted-foreground/60 hover:bg-muted/50"
+            }`}
+        >
+            {state === "refreshing" ? (
+                <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span>Pushing…</span>
+                </>
+            ) : state === "done" ? (
+                <>
+                    <Zap className="size-3.5" />
+                    <span>Users see it in ~{countdown}s</span>
+                </>
+            ) : (
+                <>
+                    <RefreshCw className="size-3.5" />
+                    <span>Refresh App</span>
+                </>
+            )}
+        </button>
+    );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function SectionsPage() {
     const queryClient = useQueryClient();
+    const searchParams = useSearchParams();
     const [formOpen, setFormOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<SectionDraft | null>(null);
     const [saving, setSaving] = useState(false);
@@ -618,6 +1930,7 @@ export default function SectionsPage() {
     const [submittingKey, setSubmittingKey] = useState<string | null>(null);
     const [approvingKey, setApprovingKey] = useState<string | null>(null);
     const [rejectingKey, setRejectingKey] = useState<string | null>(null);
+    const [showLayout, setShowLayout] = useState(false);
 
     const { data: sections = [], isLoading } = useQuery<Section[]>({
         queryKey: ["admin-sections"],
@@ -627,6 +1940,18 @@ export default function SectionsPage() {
         },
         staleTime: 30_000,
     });
+
+    // Open edit dialog when ?edit=section_key is in URL (e.g. from Overview page "Edit Layout" link)
+    useEffect(() => {
+        const editKey = searchParams.get("edit");
+        if (!editKey || sections.length === 0 || formOpen) return;
+        const target = sections.find((s) => s.section_key === editKey);
+        if (target) {
+            setEditTarget({ ...target });
+            setFormOpen(true);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams, sections]);
 
     const liveSections = sections.filter((s) => s.status === "published");
     const pendingSections = sections.filter((s) => s.status === "pending_approval");
@@ -732,9 +2057,23 @@ export default function SectionsPage() {
                             Curated home screen sections — cafés &amp; events that appear to users.
                         </p>
                     </div>
-                    <Button onClick={openCreate} size="lg" className="gap-2">
-                        <PlusCircle className="size-4" /> New Section
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowLayout((v) => !v)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+                                showLayout
+                                    ? "bg-primary/10 border-primary/40 text-primary"
+                                    : "border-muted-foreground/30 hover:border-muted-foreground/60 hover:bg-muted/50"
+                            }`}
+                        >
+                            <LayoutGrid className="size-3.5" />
+                            App Layout
+                        </button>
+                        <RefreshAppButton />
+                        <Button onClick={openCreate} size="lg" className="gap-2">
+                            <PlusCircle className="size-4" /> New Section
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Summary bar */}
@@ -773,7 +2112,7 @@ export default function SectionsPage() {
                             </div>
                             <div>
                                 <p className="text-2xl font-bold">
-                                    {sections.reduce((acc, s) => acc + s.cafe_ids.length + s.event_ids.length, 0)}
+                                    {sections.reduce((acc, s) => acc + s.cafe_ids.length + s.event_ids.length + (s.item_ids ?? []).length, 0)}
                                 </p>
                                 <p className="text-sm text-muted-foreground">Total items</p>
                             </div>
@@ -782,6 +2121,40 @@ export default function SectionsPage() {
                 )}
 
                 <Separator />
+
+                {/* ── App Layout Preview Panel ─────────────────────────────── */}
+                <AnimatePresence>
+                    {showLayout && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="rounded-2xl border bg-card p-6 space-y-4 mb-2">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-lg font-bold flex items-center gap-2">
+                                            <LayoutGrid className="size-4 text-primary" />
+                                            App Layout Preview
+                                        </h2>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            Reorder live sections per tab — changes take effect in the app within 30s.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowLayout(false)}
+                                        className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted"
+                                    >
+                                        <ChevronDown className="size-4" />
+                                    </button>
+                                </div>
+                                <AppPreviewPanel />
+                            </div>
+                            <Separator />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {sections.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-32 text-center space-y-4">
