@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -1919,7 +1919,7 @@ function RefreshAppButton() {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function SectionsPage() {
+function SectionsPageInner() {
     const queryClient = useQueryClient();
     const searchParams = useSearchParams();
     const [formOpen, setFormOpen] = useState(false);
@@ -2274,5 +2274,14 @@ export default function SectionsPage() {
                 />
             )}
         </>
+    );
+}
+
+// ─── Suspense wrapper (required for useSearchParams in Next.js App Router) ────
+export default function SectionsPage() {
+    return (
+        <Suspense>
+            <SectionsPageInner />
+        </Suspense>
     );
 }

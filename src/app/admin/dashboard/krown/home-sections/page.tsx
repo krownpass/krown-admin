@@ -617,7 +617,7 @@ export default function HomeSectionsPage() {
     });
 
     // Filter only the 3 system sections
-    const systemKeys = SYSTEM_SECTIONS.map((s) => s.key);
+    const systemKeys: string[] = SYSTEM_SECTIONS.map((s) => s.key);
     const sectionMap = Object.fromEntries(
         allSections.filter((s) => systemKeys.includes(s.section_key)).map((s) => [s.section_key, s])
     );
